@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecological Jurisprudence Initiatives</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Geist Mono',monospace; background:#F5F5F5; color:#3D3D31; overflow-x:hidden; }
+
+    /* ── SCROLLYTELLING VIEWPORT ── */
+    #scroll-container { pointer-events:none; }
+    .scroll-section { height:200vh; width:100%; pointer-events:none; }
+
+    /* ── FIXED CANVAS ── */
+    #p5-canvas { position:fixed; top:0; left:0; width:100%; height:100vh; z-index:1; cursor:default; }
+
+    /* ── FIXED OVERLAYS ── */
+    #fixed-overlays {
+        position:fixed; top:0; left:0; width:100%; height:100vh;
+        z-index:30; pointer-events:none;
+        display:flex; align-items:center; justify-content:center;
+    }
+
+    /* pill shared style */
+    .pill {
+        background:#fff; border:1.5px solid #3D3D31; border-radius:24px;
+        padding:0.85rem 2rem; text-align:center;
+        font-family:'Times New Roman',Georgia,serif; color:#3D3D31;
+        opacity:0; transition:opacity 0.45s ease;
+        position:absolute; white-space:nowrap;
+    }
+    #hero-text {
+        font-size:clamp(1.3rem,2.4vw,2.2rem); font-weight:700;
+        line-height:1.35; white-space:normal; max-width:580px;
+    }
+    #stats-display { font-size:clamp(1.1rem,2vw,1.9rem); font-weight:700; }
+    #stats-display .sep { font-weight:400; margin:0 0.4rem; }
+
+    /* narrative */
+    #narrative-text {
+        position:fixed; left:4vw; top:50%; transform:translateY(-50%);
+        z-index:30; max-width:300px; pointer-events:none;
+        opacity:0; transition:opacity 0.4s ease;
+    }
+    #narrative-text p {
+        font-family:'Geist',sans-serif; font-size:0.95rem; font-weight:400;
+        color:#3D3D31; line-height:1.65;
+        background:rgba(245,245,245,0.92); padding:1rem 1.2rem;
+        border-radius:8px; backdrop-filter:blur(4px);
+    }
+    .cursor { display:inline-block; width:2px; height:1em; background:#3D3D31;
+        margin-left:2px; vertical-align:text-bottom;
+        animation:blink 0.7s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* skip */
+    #skip-btn {
+        position:fixed; bottom:36px; right:36px; z-index:50; display:none;
+        padding:0.45rem 1.1rem; background:#3D3D31; color:#F5F5F5;
+        font-family:'Geist',sans-serif; font-size:0.82rem; font-weight:600;
+        border:none; border-radius:999px; cursor:pointer; pointer-events:auto;
+        transition:background 0.2s;
+    }
+    #skip-btn:hover { background:#555; }
+
+    /* chart labels */
+    #axis-labels-container { position:fixed; top:78vh; left:0; width:100%; height:40px; pointer-events:auto; z-index:15; }
+    #main-labels-container  { position:fixed; top:84vh; left:0; width:100%; height:30px; pointer-events:none; z-index:15; }
+    .chart-label { position:absolute; font-family:'Geist Mono',monospace; font-size:7pt; font-weight:500; color:#666; white-space:nowrap; pointer-events:none; }
+    .chart-label.main { font-size:10pt; font-weight:600; color:#3D3D31; }
+    .chart-label.axis.clickable { pointer-events:auto; cursor:pointer; color:#3D3D31; }
+    .chart-label.axis.clickable:hover { text-decoration:underline; }
+
+    /* tooltips */
+    #tooltip,#country-tooltip {
+        position:fixed; background:#3D3D31; color:#fff;
+        padding:8px 12px; border-radius:4px; font-family:'Geist',sans-serif;
+        font-size:8.5pt; pointer-events:none; z-index:1000; max-width:220px;
+        line-height:1.5; display:none; box-shadow:0 4px 14px rgba(0,0,0,.22);
+    }
+    #country-tooltip { max-width:160px; }
+    .tt-title { font-weight:700; margin-bottom:3px; }
+    .tt-meta  { font-size:7.5pt; color:#b0b0b0; margin-bottom:4px; }
+    .tt-link a { color:#8ECBF0; text-decoration:none; font-size:7.5pt; font-weight:600; }
+    .tt-link a:hover { text-decoration:underline; }
+    #pinned-tooltip {
+        position:fixed; background:#3D3D31; color:#fff;
+        padding:10px 14px; border-radius:4px; font-family:'Geist',sans-serif;
+        font-size:9pt; pointer-events:auto; z-index:2000; max-width:220px;
+        line-height:1.5; display:none; box-shadow:0 4px 16px rgba(0,0,0,.25);
+        border-left:3px solid #8ECBF0;
+    }
+    #pinned-tooltip .tt-title { font-weight:700; margin-bottom:3px; color:#fff; }
+    #pinned-tooltip .tt-meta  { font-size:7.5pt; color:#b0b0b0; margin-bottom:5px; }
+    #pinned-tooltip .tt-link a { color:#8ECBF0; text-decoration:none; font-size:7.5pt; font-weight:600; }
+    #pt-close { position:absolute; top:5px; right:7px; cursor:pointer; color:#888; font-size:11pt; background:none; border:none; padding:0; }
+    #pt-close:hover { color:#fff; }
+
+    /* progress */
+    #progress-bar-track { position:fixed; bottom:0; left:0; width:100%; height:7px; background:rgba(61,61,49,.1); z-index:100; pointer-events:none; }
+    #progress-bar-fill  { height:100%; width:0%; background:#4F6F89; transition:width .1s linear; }
+
+    /* ═══════════════════════════════════
+       STATIC CONTENT (below scrollytelling)
+    ═══════════════════════════════════ */
+    #static-content {
+        position:relative; z-index:5;
+        background:#F5F5F5;
+        padding:80px 5vw 120px;
+    }
+
+    /* end buttons */
+    #end-buttons {
+        display:flex; flex-direction:column; align-items:center; gap:16px;
+        margin-bottom:80px;
+    }
+    .end-btn {
+        display:block; width:220px; text-align:center;
+        padding:0.75rem 0;
+        background:#ffffff; border:1.5px solid #3D3D31; border-radius:999px;
+        font-family:'Geist',sans-serif; font-size:1rem; font-weight:600;
+        color:#3D3D31; text-decoration:none; cursor:pointer;
+        transition:background .2s;
+    }
+    .end-btn:hover { background:#9FD4F4; }
+
+    /* expanding panels carousel */
+    #initiative-carousel {
+        display:flex; gap:6px; margin-bottom:80px;
+        height:380px; overflow:hidden; border-radius:12px;
+    }
+    .init-panel {
+        flex:1 1 0;           /* all panels share space equally when collapsed */
+        min-width:0;
+        border-radius:10px;
+        overflow:hidden; cursor:pointer;
+        transition:flex-grow 0.45s cubic-bezier(0.4,0,0.2,1);
+        position:relative;
+    }
+    /* the image fills the whole panel as the background slice */
+    .init-panel-bg {
+        position:absolute; inset:0;
+        background-size:cover; background-position:center;
+        transition:filter 0.3s;
+        filter:brightness(0.82);
+    }
+    .init-panel:hover .init-panel-bg { filter:brightness(1); }
+    /* dark gradient at bottom for legibility when expanded */
+    .init-panel-bg::after {
+        content:''; position:absolute; inset:0;
+        background:linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%);
+        opacity:0; transition:opacity 0.3s;
+    }
+    .init-panel:hover .init-panel-bg::after { opacity:1; }
+    /* hover expands this panel to ~3× its share */
+    .init-panel:hover { flex-grow:4; }
+    /* expanded card content (overlaid on image) */
+    .init-panel-content {
+        position:absolute; bottom:0; left:0; right:0;
+        padding:16px 16px 18px;
+        opacity:0; transition:opacity 0.2s 0.42s;
+    }
+    .init-panel:hover .init-panel-content { opacity:1; transition:opacity 0.2s 0.42s; }
+    .init-panel:not(:hover) .init-panel-content { opacity:0; transition:opacity 0s; }
+    .init-card-title { font-family:'Geist',sans-serif; font-size:0.88rem; font-weight:600; color:#fff; margin-bottom:5px; line-height:1.35; }
+    .init-card-meta  { font-family:'Geist Mono',monospace; font-size:7pt; color:rgba(255,255,255,0.75); line-height:1.6; }
+    .init-card-link  { display:inline-block; margin-top:8px; font-family:'Geist',sans-serif; font-size:7.5pt; font-weight:600; color:#8ECBF0; text-decoration:none; }
+    .init-card-link:hover { text-decoration:underline; }
+
+    /* accordion wrapper */
+    #faq-wrapper {
+        display:flex; justify-content:center;
+    }
+    #faq-section {
+        width:100%; max-width:760px;
+        background:#fff; border:1.5px solid #3D3D31; border-radius:20px;
+        padding:8px 40px 24px;
+    }
+    .faq-q {
+        font-family:'Times New Roman',Georgia,serif; font-size:1.05rem;
+        font-weight:700; color:#3D3D31; cursor:pointer;
+        padding:18px 40px 18px 0; border-top:1px solid #D1D1BF;
+        position:relative; user-select:none;
+    }
+    .faq-q:first-child { border-top:none; }
+    .faq-q::after {
+        content:'＋'; position:absolute; right:0; top:50%;
+        transform:translateY(-50%); font-size:1.2rem; font-weight:400;
+        transition:transform .25s;
+    }
+    .faq-q.open::after { content:'−'; }
+    .faq-a {
+        font-family:'Geist',sans-serif; font-size:0.93rem; font-weight:400;
+        color:#3D3D31; line-height:1.7;
+        max-height:0; overflow:hidden; transition:max-height .35s ease, padding .25s;
+        padding:0;
+    }
+    .faq-a.open { max-height:600px; padding-bottom:20px; }
+    .faq-a p+p { margin-top:10px; }
+    </style>
+</head>
+<body>
+
+<div id="progress-bar-track"><div id="progress-bar-fill"></div></div>
+
+<!-- Fixed overlays (pills + narrative) -->
+<div id="fixed-overlays">
+    <div id="hero-text"   class="pill">Explore the definitive tracker<br>of ecocentric laws around the world</div>
+    <div id="stats-display" class="pill"><span id="stat-initiatives">0</span> Initiatives<span class="sep">·</span><span id="stat-countries">0</span> Countries<span class="sep">·</span>1 Movement</div>
+</div>
+<div id="narrative-text"><p id="narrative-p"></p></div>
+<button id="skip-btn">skip →</button>
+
+<!-- Tooltips -->
+<div id="tooltip"><div class="tt-title" id="tt-title"></div><div class="tt-meta" id="tt-meta"></div><div class="tt-link" id="tt-link"></div></div>
+<div id="country-tooltip"></div>
+<div id="pinned-tooltip">
+    <button id="pt-close">×</button>
+    <div class="tt-title" id="pt-title"></div>
+    <div class="tt-meta"  id="pt-meta"></div>
+    <div class="tt-link"  id="pt-link"></div>
+</div>
+
+<!-- Chart labels -->
+<div id="axis-labels-container"></div>
+<div id="main-labels-container"></div>
+
+<!-- Canvas -->
+<div id="p5-canvas"></div>
+
+<!-- Scrollytelling spacers -->
+<div id="scroll-container">
+    <div class="scroll-section" data-section="s0-hero"></div>
+    <div class="scroll-section" data-section="s1-stats"></div>
+    <div class="scroll-section" data-section="s2-narrate1"></div>
+    <div class="scroll-section" data-section="s3-narrate2"></div>
+    <div class="scroll-section" data-section="s4-regions"></div>
+    <div class="scroll-section" data-section="s5-year"></div>
+    <div class="scroll-section" data-section="s6-framework"></div>
+    <div class="scroll-section" data-section="s7-status"></div>
+    <div class="scroll-section" data-section="s8-nature"></div>
+    <div class="scroll-section" data-section="s9-end"></div>
+</div>
+
+<!-- ═══ STATIC CONTENT ═══ -->
+<div id="static-content">
+
+    <!-- End buttons -->
+    <div id="end-buttons">
+        <a class="end-btn" href="#">Map Builder</a>
+        <a class="end-btn" href="#">Initiative Index</a>
+    </div>
+
+    <!-- Initiative carousel -->
+    <div id="initiative-carousel">
+        <!-- Cards injected by JS once data loads -->
+    </div>
+
+    <!-- FAQ accordion -->
+    <div id="faq-wrapper">
+    <div id="faq-section">
+        <div class="faq-q">What is Ecological Jurisprudence?</div>
+        <div class="faq-a"><p>Ecological jurisprudence is a broad field of legal theory and practice that recognises the rights of nature and the intrinsic value of ecosystems. It challenges human-centred legal frameworks by placing ecological health at the centre of law.</p><p>Drawing on Earth jurisprudence, indigenous legal traditions, and rights-of-nature scholarship, ecological jurisprudence seeks to transform how legal systems relate to the living world.</p></div>
+
+        <div class="faq-q">What do we include?</div>
+        <div class="faq-a"><p>We track legal initiatives from around the world that formally recognise the rights, interests, or legal personhood of nature — whether through constitutions, legislation, court cases, policies, or civil society instruments.</p><p>We include both formal law (state-enacted) and soft law (civil society declarations, tribunals, and governance frameworks) that meaningfully advance ecological jurisprudence.</p></div>
+
+        <div class="faq-q">What types of legal initiatives are included?</div>
+        <div class="faq-a"><p>Initiatives span constitutions, national and subnational legislation, court cases, executive policies, formal declarations, indigenous law, civil society declarations and tribunals, private sector governance frameworks, and position statements.</p><p>Each initiative is categorised by its primary legal form and mapped to a region and one or more nature types.</p></div>
+
+        <div class="faq-q">What types of eco jurisprudence are included?</div>
+        <div class="faq-a"><p>We include initiatives protecting all nature types: water bodies (rivers, lakes, oceans, wetlands), forests and plants, animals and species, land-based ecosystems (mountains, grasslands, deserts), climate and atmospheric systems, and initiatives granting rights to nature as a whole.</p><p>Initiatives covering multiple nature types or entire ecosystems are categorised accordingly.</p></div>
+
+        <div class="faq-q">How we gather this data</div>
+        <div class="faq-a"><p>Data is gathered through a combination of continuous monitoring of legal journals, news sources, government publications, and civil society reports. Our team reviews and verifies each initiative before it is added to the tracker.</p><p>We also rely on a global network of partners and contributors who notify us of new or updated initiatives in their regions.</p></div>
+
+        <div class="faq-q">How we track: a participatory model</div>
+        <div class="faq-a"><p>The EJM operates on a participatory model: anyone can submit a new initiative or correction through our data request form. Submissions are reviewed by our editorial team before being published.</p><p>Regional representatives help maintain accuracy within their areas of expertise, ensuring the tracker reflects ground-level developments.</p></div>
+
+        <div class="faq-q">To meet our criteria, an initiative must:</div>
+        <div class="faq-a"><p>Have a formal legal basis or documented civil society status. Explicitly reference the rights, interests, or legal standing of nature or a specific ecosystem. Be verifiable through primary or credible secondary sources. Have been initiated or formally recognised from 2006 onwards (or be a documented precursor of contemporary movements).</p></div>
+
+        <div class="faq-q">How to cite/use the data</div>
+        <div class="faq-a"><p>Data from the Eco Jurisprudence Monitor may be used freely for research, journalism, education, and advocacy with attribution. Please cite as: Eco Jurisprudence Monitor (year). Initiative Tracker. ecojurisprudence.org.</p><p>For bulk data requests or partnership enquiries, please use the data request form linked in the navigation.</p></div>
+    </div><!-- /faq-section -->
+    </div><!-- /faq-wrapper -->
+
+</div><!-- /static-content -->
+
+<script>
+/* ════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════ */
+let data=[], particles=[];
+let currentSection='s0-hero';
+let p5Instance, worldGeoJson=null, mapProjection=null;
+let selectedParticle=null;
+let showMap=true;
+let showCountryFills=true;   // false once we leave regions
+let highlightCountries=new Set();
+let typewriterTimer=null;
+let statsAnimated=false;
+let particleMapPos=[];
+let hoveredCountry=null;   // GeoJSON feature currently under mouse
+let countryCounts={};      // country name → initiative count, built after data loads
+
+/* ════════════════════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════════════════════ */
+const NATURE_COLORS={
+    'All Nature':'#85854D','General':'#85854D','Animal':'#FF9B00','Species':'#FF9B00',
+    'Plant':'#7A3F0F','Forest':'#7A3F0F','Fungi':'#7A3F0F',
+    'Marine':'#8ECBF0','Ocean':'#8ECBF0','Freshwater':'#8ECBF0','River':'#8ECBF0',
+    'Lake':'#8ECBF0','Wetland':'#8ECBF0','Arctic':'#8ECBF0',
+    'Grassland':'#DCC240','Mountain':'#DCC240','Desert':'#DCC240',
+    'Space':'#254A69','Urban':'#254A69','Climate':'#254A69',
+    'Ecosystem':'#985475','Multiple':'#985475'
+};
+
+/*I reordered the arrays based on the length of the labels */
+
+const FORMAL_LAW=['Constitution','Indigenous Law','Court Case','Policy','Legislation','Declaration'];
+const SOFT_LAW=['Civil Society Declaration', 'Private Sector Governance', 'Civil Society Tribunal','Indigenous Declaration','Position Statement'];
+const FRAMEWORK_ORDER=[...FORMAL_LAW,...SOFT_LAW];
+const REGION_ORDER=['North America','Latin America','Europe','Africa','Asia','Oceania','International'];
+const NATURE_ORDER=['All Nature','Animal','Plant + Forest','Water','Land','Other','Multiple'];
+const REGION_URLS={
+    'North America':'https://ecojurisprudence.org/region/north-america/',
+    'Latin America':'https://ecojurisprudence.org/region/latin-america/',
+    'Europe':'https://ecojurisprudence.org/region/europe/',
+    'Africa':'https://ecojurisprudence.org/region/africa/',
+    'Asia':'https://ecojurisprudence.org/region/asia/',
+    'Oceania':'https://ecojurisprudence.org/region/oceania/',
+    'International':'https://ecojurisprudence.org/region/international/',
+};
+const GEO_TO_REGION={
+    'USA':'North America','Canada':'North America','Mexico':'North America',
+    'Brazil':'Latin America','Colombia':'Latin America','Ecuador':'Latin America',
+    'Bolivia':'Latin America','Peru':'Latin America','Argentina':'Latin America',
+    'Chile':'Latin America','Venezuela':'Latin America','Uruguay':'Latin America',
+    'Paraguay':'Latin America','Panama':'Latin America','Costa Rica':'Latin America',
+    'Guatemala':'Latin America','Honduras':'Latin America','El Salvador':'Latin America',
+    'Nicaragua':'Latin America','Cuba':'Latin America','Haiti':'Latin America','Dominican Rep.':'Latin America',
+    'United Kingdom':'Europe','France':'Europe','Germany':'Europe','Spain':'Europe',
+    'Italy':'Europe','Netherlands':'Europe','Belgium':'Europe','Sweden':'Europe',
+    'Norway':'Europe','Denmark':'Europe','Finland':'Europe','Switzerland':'Europe',
+    'Austria':'Europe','Portugal':'Europe','Ireland':'Europe','Poland':'Europe',
+    'Czech Rep.':'Europe','Slovakia':'Europe','Hungary':'Europe','Romania':'Europe',
+    'Bulgaria':'Europe','Croatia':'Europe','Slovenia':'Europe','Estonia':'Europe',
+    'Latvia':'Europe','Lithuania':'Europe','Greece':'Europe','Iceland':'Europe',
+    'Nigeria':'Africa','South Africa':'Africa','Kenya':'Africa','Uganda':'Africa',
+    'Tanzania':'Africa','Ghana':'Africa','Ethiopia':'Africa','Senegal':'Africa',
+    'Cameroon':'Africa','Mozambique':'Africa','Zambia':'Africa','Zimbabwe':'Africa',
+    'Madagascar':'Africa','Morocco':'Africa','Egypt':'Africa','Algeria':'Africa',
+    'Sudan':'Africa','South Sudan':'Africa','Rwanda':'Africa','Congo':'Africa',
+    'Dem. Rep. Congo':'Africa','Angola':'Africa','Namibia':'Africa','Botswana':'Africa',
+    'China':'Asia','India':'Asia','Japan':'Asia','South Korea':'Asia',
+    'Indonesia':'Asia','Philippines':'Asia','Vietnam':'Asia','Thailand':'Asia',
+    'Malaysia':'Asia','Bangladesh':'Asia','Pakistan':'Asia','Nepal':'Asia',
+    'Sri Lanka':'Asia','Cambodia':'Asia','Myanmar':'Asia','Mongolia':'Asia',
+    'Iran':'Asia','Iraq':'Asia','Turkey':'Asia','Jordan':'Asia',
+    'Israel':'Asia','Saudi Arabia':'Asia','UAE':'Asia','Yemen':'Asia',
+    'Armenia':'Asia','Georgia':'Asia','Azerbaijan':'Asia',
+    'Australia':'Oceania','New Zealand':'Oceania','Papua New Guinea':'Oceania',
+    'Fiji':'Oceania','Solomon Is.':'Oceania','Vanuatu':'Oceania',
+};
+
+/* ════════════════════════════════════════════════════
+   GEO JSON
+════════════════════════════════════════════════════ */
+fetch('https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson')
+    .then(r=>r.json()).then(geo=>{
+        geo.features=geo.features.filter(f=>f.properties.name!=='Antarctica');
+        worldGeoJson=geo;
+        resolveCountryCounts();
+        if (p5Instance){
+            mapProjection=buildProjection(p5Instance.width,p5Instance.height);
+            cacheMapPositions(); placeParticlesOnMap();
+        }
+    });
+
+// Match each data Country string to a GeoJSON feature name, sum counts
+function resolveCountryCounts(){
+    if(!worldGeoJson||!window._rawCountryCounts) return;
+    const raw=window._rawCountryCounts;
+    const geoNames=worldGeoJson.features.map(f=>f.properties.name);
+    // For each raw country string, find the best-matching GeoJSON name
+    Object.entries(raw).forEach(([dataName, count])=>{
+        const dl=dataName.toLowerCase();
+        // 1. exact match
+        let match=geoNames.find(g=>g.toLowerCase()===dl);
+        // 2. GeoJSON name contained in data name or vice versa
+        if(!match) match=geoNames.find(g=>dl.includes(g.toLowerCase())||g.toLowerCase().includes(dl));
+        if(match) countryCounts[match]=(countryCounts[match]||0)+count;
+    });
+}
+function buildProjection(w,h){
+    if (!worldGeoJson) return null;
+    return d3.geoNaturalEarth1().fitExtent([[30,10],[w-30,h-10]],worldGeoJson);
+}
+
+/* ════════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════════ */
+Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vSKgeCFRWhEydDOm3JMjw-F9MI8bNvgWYkXSA-_3S8Mo9Ehxs3WrB07UbNfrFdfDiOLqHc67BR6kyaG/pub?gid=600477657&single=true&output=csv',{
+    download:true, header:true,
+    complete(results){
+        data=results.data.filter(r=>r.Region);
+        // Build raw count keyed by data's Country string
+        const rawCounts={};
+        data.forEach(r=>{
+            const c=(r.Country||'').trim();
+            if(c) rawCounts[c]=(rawCounts[c]||0)+1;
+        });
+        // countryCounts will be keyed by GeoJSON feature name, built once GeoJSON is ready
+        // Store rawCounts for now; resolveCountryCounts() will run after GeoJSON loads
+        window._rawCountryCounts=rawCounts;
+        initViz();
+        buildCarousel();
+    },
+    error(){ console.error('Data load failed'); }
+});
+
+/* ════════════════════════════════════════════════════
+   PARTICLE
+════════════════════════════════════════════════════ */
+class Particle {
+    constructor(d,i){
+        this.data=d; this.index=i;
+        this.title=d.Title||'Unknown';
+        this.permalink=d.Permalink||'';
+        this.color=this.getColor(d['Nature Type']);
+        this.x=0; this.y=0; this.targetX=0; this.targetY=0;
+        this.size=7; this.visible=true; this.frozen=false;
+    }
+    getColor(t){
+        if (!t) return '#85854D';
+        if (t.includes('|')) return NATURE_COLORS['Multiple'];
+        if (NATURE_COLORS[t]) return NATURE_COLORS[t];
+        const l=t.toLowerCase();
+        if(l.includes('all')||l.includes('general'))   return NATURE_COLORS['All Nature'];
+        if(l.includes('animal')||l.includes('species')) return NATURE_COLORS['Animal'];
+        if(l.includes('plant')||l.includes('forest')||l.includes('fungi')) return NATURE_COLORS['Plant'];
+        if(l.includes('marine')||l.includes('ocean')||l.includes('river')||
+           l.includes('lake')||l.includes('fresh')||l.includes('wetland')||l.includes('arctic')) return NATURE_COLORS['Marine'];
+        if(l.includes('grass')||l.includes('mountain')||l.includes('desert')) return NATURE_COLORS['Grassland'];
+        if(l.includes('space')||l.includes('urban')||l.includes('climate')) return NATURE_COLORS['Space'];
+        if(l.includes('ecosystem')||l.includes('multiple')) return NATURE_COLORS['Ecosystem'];
+        return '#85854D';
+    }
+    update(){ if(this.frozen)return; this.x+=(this.targetX-this.x)*0.08; this.y+=(this.targetY-this.y)*0.08; }
+    display(){
+        if(!this.visible) return;
+        const isSel=selectedParticle===this, hasSel=selectedParticle!==null;
+        p5Instance.noStroke();
+        if(hasSel&&!isSel){ const c=p5Instance.color(this.color); c.setAlpha(35); p5Instance.fill(c); }
+        else if(isSel){
+            p5Instance.noFill(); p5Instance.stroke(this.color); p5Instance.strokeWeight(1.5);
+            p5Instance.circle(this.x,this.y,this.size+8);
+            p5Instance.noStroke(); p5Instance.fill(this.color);
+            p5Instance.circle(this.x,this.y,this.size+2); return;
+        } else { p5Instance.fill(this.color); }
+        p5Instance.circle(this.x,this.y,this.size);
+    }
+    setTarget(x,y,visible=true){ this.targetX=x; this.targetY=y; this.visible=visible; this.frozen=false; }
+    snapTo(x,y,visible=true){ this.x=x; this.y=y; this.targetX=x; this.targetY=y; this.visible=visible; this.frozen=false; }
+}
+
+/* ════════════════════════════════════════════════════
+   P5 INIT
+════════════════════════════════════════════════════ */
+function initViz(){
+    new p5(p=>{
+        p5Instance=p;
+        p.setup=function(){
+            p.pixelDensity(window.devicePixelRatio||2);
+            p.createCanvas(window.innerWidth,window.innerHeight).parent('p5-canvas');
+            if(worldGeoJson) mapProjection=buildProjection(p.width,p.height);
+            resolveCountryCounts();
+            data.forEach((d,i)=>particles.push(new Particle(d,i)));
+            cacheMapPositions(); placeParticlesOnMap();
+            show('hero-text');
+        };
+        p.draw=function(){
+            p.background('#F5F5F5');
+            if(showMap&&worldGeoJson&&mapProjection) drawMap(p);
+            particles.forEach(pt=>{pt.update();pt.display();});
+            if(frameworkBrackets.length) drawFrameworkBrackets(p);
+            if(selectedParticle) positionPinnedTooltip();
+        };
+        p.windowResized=function(){
+            p.pixelDensity(window.devicePixelRatio||2);
+            p.resizeCanvas(window.innerWidth,window.innerHeight);
+            mapProjection=buildProjection(p.width,p.height);
+            cacheMapPositions(); onSectionEnter(currentSection);
+        };
+        p.mouseMoved=function(){
+            const ttEl=document.getElementById('tooltip');
+            const ctEl=document.getElementById('country-tooltip');
+            if(selectedParticle){ttEl.style.display='none'; ctEl.style.display='none'; hoveredCountry=null; return;}
+            const found=findParticle(p.mouseX,p.mouseY);
+            if(found){
+                document.getElementById('tt-title').textContent=found.title;
+                document.getElementById('tt-meta').textContent=`${found.data['Year Initiated']||'—'} · ${found.data['Status']||'—'}`;
+                document.getElementById('tt-link').innerHTML=found.permalink?`<a href="${found.permalink}" target="_blank">more info ↗</a>`:'';
+                ttEl.style.display='block';
+                ttEl.style.left=(p.mouseX+14)+'px'; ttEl.style.top=(p.mouseY-8)+'px';
+                p.canvas.style.cursor='pointer';
+                ctEl.style.display='none'; hoveredCountry=null;
+            } else {
+                ttEl.style.display='none';
+                // Country hit-test (only when map visible)
+                if(showMap&&worldGeoJson&&mapProjection){
+                    // Convert canvas px → geographic coords via invert
+                    const inv=mapProjection.invert&&mapProjection.invert([p.mouseX,p.mouseY]);
+                    let hit=null;
+                    if(inv){
+                        for(const f of worldGeoJson.features){
+                            if(d3.geoContains(f,inv)){ hit=f; break; }
+                        }
+                    }
+                    if(hit){
+                        hoveredCountry=hit.properties.name;
+                        const n=countryCounts[hoveredCountry]||0;
+                        ctEl.textContent=`${hoveredCountry}: ${n} initiative${n!==1?'s':''}`;
+                        ctEl.style.display='block';
+                        ctEl.style.left=(p.mouseX+14)+'px'; ctEl.style.top=(p.mouseY-8)+'px';
+                        p.canvas.style.cursor='default';
+                    } else {
+                        hoveredCountry=null; ctEl.style.display='none';
+                        p.canvas.style.cursor='default';
+                    }
+                } else {
+                    hoveredCountry=null; ctEl.style.display='none';
+                    p.canvas.style.cursor='default';
+                }
+            }
+        };
+        p.mouseClicked=function(){
+            const found=findParticle(p.mouseX,p.mouseY);
+            if(found){ selectedParticle===found?hidePinned():showPinned(found); }
+            else hidePinned();
+        };
+    });
+    setupObserver();
+    document.getElementById('skip-btn').addEventListener('click',()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}));
+    document.getElementById('pt-close').addEventListener('click',hidePinned);
+    window.addEventListener('scroll',()=>{
+        if(selectedParticle) positionPinnedTooltip();
+        const pct=window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100;
+        document.getElementById('progress-bar-fill').style.width=pct+'%';
+    });
+}
+
+/* ════════════════════════════════════════════════════
+   MAP DRAWING (fills only, no outlines when showCountryFills)
+════════════════════════════════════════════════════ */
+function drawMap(p){
+    const ctx=p.drawingContext;
+    ctx.save();
+    const pathGen=d3.geoPath().context(ctx);
+    pathGen.projection(mapProjection);
+    worldGeoJson.features.forEach(feat=>{
+        const name=feat.properties.name;
+        ctx.beginPath(); pathGen(feat);
+        if(name===hoveredCountry){
+            ctx.fillStyle='rgba(61,61,49,0.28)';
+        } else if(highlightCountries.has(name)){
+            ctx.fillStyle='rgba(61,61,49,0.13)';
+        } else {
+            ctx.fillStyle='rgba(61,61,49,0.07)';
+        }
+        ctx.fill();
+    });
+    ctx.restore();
+}
+
+/* ════════════════════════════════════════════════════
+   MAP POSITIONS
+════════════════════════════════════════════════════ */
+function cacheMapPositions(){
+    const w=p5Instance.width;
+    particleMapPos=particles.map(p=>{
+        const lat=parseFloat(p.data.Latitude), lng=parseFloat(p.data.Longitude);
+        if(!isNaN(lat)&&!isNaN(lng)&&mapProjection){
+            const pt=mapProjection([lng,lat]);
+            if(pt) return {x:pt[0],y:pt[1]};
+        }
+        return {x:w-80,y:40};
+    });
+}
+function placeParticlesOnMap(){
+    particles.forEach((p,i)=>{
+        const pos=particleMapPos[i]||{x:p5Instance.width-80,y:40};
+        p.snapTo(pos.x,pos.y,true);
+    });
+}
+
+/* ════════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════════ */
+function findParticle(mx,my,r=8){
+    for(const pt of particles){ if(!pt.visible)continue; if((mx-pt.x)**2+(my-pt.y)**2<r*r)return pt; }
+    return null;
+}
+function positionPinnedTooltip(){
+    if(!selectedParticle) return;
+    let left=selectedParticle.x+14, top=selectedParticle.y-40;
+    if(left+220>window.innerWidth-10) left=selectedParticle.x-234;
+    if(top<10) top=10;
+    if(top+90>window.innerHeight-10) top=window.innerHeight-100;
+    const el=document.getElementById('pinned-tooltip');
+    el.style.left=left+'px'; el.style.top=top+'px';
+}
+function showPinned(p){
+    selectedParticle=p;
+    document.getElementById('pt-title').textContent=p.title;
+    document.getElementById('pt-meta').textContent=`${p.data['Year Initiated']||'—'} · ${p.data['Status']||'—'}`;
+    document.getElementById('pt-link').innerHTML=p.permalink?`<a href="${p.permalink}" target="_blank">more info ↗</a>`:'';
+    document.getElementById('pinned-tooltip').style.display='block';
+    positionPinnedTooltip();
+}
+function hidePinned(){ selectedParticle=null; document.getElementById('pinned-tooltip').style.display='none'; }
+
+/* ════════════════════════════════════════════════════
+   TYPEWRITER
+════════════════════════════════════════════════════ */
+function typewrite(text, onDone){
+    clearTimeout(typewriterTimer);
+    const pel=document.getElementById('narrative-p');
+    const box=document.getElementById('narrative-text');
+    box.style.opacity='1'; pel.innerHTML=''; let i=0;
+    function tick(){
+        pel.innerHTML=text.slice(0,i)+'<span class="cursor"></span>';
+        if(i<text.length){i++; typewriterTimer=setTimeout(tick,17);}
+        else{pel.innerHTML=text; if(onDone)onDone();}
+    }
+    tick();
+}
+function clearNarrative(){
+    clearTimeout(typewriterTimer);
+    document.getElementById('narrative-text').style.opacity='0';
+    document.getElementById('narrative-p').innerHTML='';
+    document.getElementById('skip-btn').style.display='none';
+}
+
+/* ════════════════════════════════════════════════════
+   STATS
+════════════════════════════════════════════════════ */
+function animateStats(){
+    if(statsAnimated)return; statsAnimated=true;
+    const nI=particles.length;
+    const nC=new Set(data.map(r=>(r.Country||'').trim()).filter(Boolean)).size;
+    let f=0; const iv=setInterval(()=>{
+        f++; const e=1-Math.pow(1-f/60,3);
+        document.getElementById('stat-initiatives').textContent=Math.round(e*nI);
+        document.getElementById('stat-countries').textContent=Math.round(e*nC);
+        if(f>=60){
+            document.getElementById('stat-initiatives').textContent=nI;
+            document.getElementById('stat-countries').textContent=nC;
+            clearInterval(iv);
+        }
+    },1200/60);
+}
+function resetStats(){
+    statsAnimated=false;
+    document.getElementById('stat-initiatives').textContent='0';
+    document.getElementById('stat-countries').textContent='0';
+}
+
+/* ════════════════════════════════════════════════════
+   LABELS
+════════════════════════════════════════════════════ */
+function clearLabels(){
+    document.getElementById('axis-labels-container').innerHTML='';
+    document.getElementById('main-labels-container').innerHTML='';
+    frameworkBrackets=[];
+}
+function addAxisLabel(text,x,opts={}){
+    const el=document.createElement('div');
+    el.className='chart-label axis'+(opts.clickable?' clickable':'');
+    el.textContent=text; el.style.left=x+'px';
+    if(opts.clickable){
+        el.addEventListener('click',()=>window.open(REGION_URLS[opts.region],'_blank'));
+        const count=particles.filter(p=>p.data.Region===opts.region).length;
+        const ct=document.getElementById('country-tooltip');
+        el.addEventListener('mouseenter',e=>{ct.textContent=`${count} initiatives`;ct.style.display='block';ct.style.left=(e.clientX+10)+'px';ct.style.top=(e.clientY-26)+'px';});
+        el.addEventListener('mousemove',e=>{ct.style.left=(e.clientX+10)+'px';ct.style.top=(e.clientY-26)+'px';});
+        el.addEventListener('mouseleave',()=>ct.style.display='none');
+    }
+    document.getElementById('axis-labels-container').appendChild(el);
+}
+function addMainLabel(text,x){
+    const el=document.createElement('div');
+    el.className='chart-label main'; el.textContent=text; el.style.left=x+'px';
+    document.getElementById('main-labels-container').appendChild(el);
+}
+function show(id){document.getElementById(id).style.opacity='1';}
+function hide(id){document.getElementById(id).style.opacity='0';}
+
+/* ════════════════════════════════════════════════════
+   SECTION LOGIC — called on EVERY enter (up or down)
+════════════════════════════════════════════════════ */
+function onSectionEnter(sec){
+    // Reset all overlays
+    hide('hero-text'); hide('stats-display'); clearNarrative();
+
+    switch(sec){
+        case 's0-hero':
+            showMap=true; showCountryFills=false; highlightCountries.clear();
+            // Particles stay on map — re-place to ensure correct after scrolling back
+            if(p5Instance&&particleMapPos.length) placeParticlesOnMap();
+            show('hero-text');
+            break;
+
+        case 's1-stats':
+            showMap=true; showCountryFills=false; highlightCountries.clear();
+            if(p5Instance&&particleMapPos.length) placeParticlesOnMap();
+            show('stats-display');
+            resetStats(); animateStats();
+            break;
+
+        case 's2-narrate1':
+            showMap=true; showCountryFills=false; highlightCountries.clear();
+            if(p5Instance&&particleMapPos.length) placeParticlesOnMap();
+            typewrite('Since 2019, the Eco Jurisprudence Monitor has tracked the emergence of ecocentric law globally.',
+                ()=>{document.getElementById('skip-btn').style.display='block';});
+            break;
+
+        case 's3-narrate2':
+            showMap=true; showCountryFills=false; highlightCountries.clear();
+            if(p5Instance&&particleMapPos.length) placeParticlesOnMap();
+            typewrite('Every dot represents one initiative. Click and explore.');
+            break;
+
+        case 's4-regions':
+            showMap=true; showCountryFills=true; hoveredCountry=null;
+            highlightCountries.clear();
+            if(worldGeoJson) worldGeoJson.features.forEach(f=>{
+                if(GEO_TO_REGION[f.properties.name]) highlightCountries.add(f.properties.name);
+            });
+            layoutAllRegions();
+            break;
+
+        case 's5-year':
+            showMap=false; showCountryFills=false; highlightCountries.clear(); hoveredCountry=null;
+            clearLabels();
+            typewrite('The commonly recognized starting point of the modern Rights of Nature movement is 2006. Some initiatives pre-date this moment.');
+            layoutByYear();
+            break;
+
+        case 's6-framework':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            clearNarrative();
+            typewrite('This is placeholder text about legal tools.');
+            layoutByFramework();
+            break;
+
+        case 's7-status':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            layoutByStatus();
+            break;
+
+        case 's8-nature':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            clearNarrative();
+            typewrite('This is placeholder text about nature types.');
+            layoutByNature();
+            break;
+
+        case 's9-end':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            clearLabels();
+            particles.forEach(p=>{
+                p.frozen=false;
+                // scatter off screen in random direction
+                const angle=Math.random()*Math.PI*2;
+                const dist=Math.max(window.innerWidth,window.innerHeight)*1.5;
+                p.setTarget(p.x+Math.cos(angle)*dist, p.y+Math.sin(angle)*dist, true);
+            });
+            break;
+    }
+}
+
+/* ════════════════════════════════════════════════════
+   OBSERVER — scroll-position-based, works both directions
+════════════════════════════════════════════════════ */
+function setupObserver(){
+    const sections=[...document.querySelectorAll('.scroll-section')];
+    // Use scroll position to determine which section is "active"
+    // (most centered in viewport). This works perfectly both up and down.
+    function update(){
+        const mid=window.scrollY+window.innerHeight/2;
+        let best=null, bestDist=Infinity;
+        sections.forEach(s=>{
+            const top=s.offsetTop, bot=top+s.offsetHeight;
+            const center=top+s.offsetHeight/2;
+            // section must actually contain the viewport midpoint
+            if(mid>=top && mid<bot){
+                const dist=Math.abs(center-mid);
+                if(dist<bestDist){ bestDist=dist; best=s; }
+            }
+        });
+        if(best){
+            const sec=best.dataset.section;
+            if(sec!==currentSection){ currentSection=sec; onSectionEnter(sec); }
+        }
+    }
+    window.addEventListener('scroll', update, {passive:true});
+    // Also run once on load
+    setTimeout(update, 100);
+}
+
+/* ════════════════════════════════════════════════════
+   BOTTOM Y
+════════════════════════════════════════════════════ */
+function bY(){ return p5Instance.height*0.75; }
+
+/* ════════════════════════════════════════════════════
+   LAYOUTS
+════════════════════════════════════════════════════ */
+function layoutAllRegions(){
+    if(!p5Instance) return; clearLabels();
+    const w=p5Instance.width, dotSp=8, maxCols=8, barSp=42;
+    const barW=maxCols*dotSp;
+    const totalW=REGION_ORDER.length*barW+(REGION_ORDER.length-1)*barSp;
+    const startX=(w-totalW)/2;
+    const regions={};
+    particles.forEach(p=>{ const r=p.data.Region||'Unknown'; if(!regions[r])regions[r]=[]; regions[r].push(p); });
+    REGION_ORDER.forEach((region,i)=>{
+        const cx=startX+i*(barW+barSp), rp=regions[region]||[];
+        if(!rp.length) return;
+        addAxisLabel(region,cx,{clickable:true,region});
+        sortByYear(rp);
+        rp.forEach((p,j)=>{ p.frozen=false; p.setTarget(cx+(j%maxCols)*dotSp+3,bY()-Math.floor(j/maxCols)*dotSp,true); });
+    });
+}
+
+function layoutByYear(){
+    if(!p5Instance) return; clearLabels();
+    const w=p5Instance.width, bottom=bY(), margin=60, barSp=8;
+    const years={};
+    particles.forEach(p=>{ const y=parseInt(p.data['Year Initiated']); if(!isNaN(y)&&y>=2006&&y<=2026){if(!years[y])years[y]=[];years[y].push(p);} });
+    const yearKeys=Array.from({length:21},(_,i)=>2006+i);
+    const totalW=w-margin*2, barW=(totalW-barSp*(yearKeys.length-1))/yearKeys.length;
+    let cx=margin;
+    yearKeys.forEach(year=>{
+        const yp=years[year]||[]; sortByFramework(yp);
+        addAxisLabel(year.toString(),cx);
+        const cols=Math.min(8,Math.max(1,Math.floor(barW/8)));
+        yp.forEach((p,j)=>{ p.frozen=false; p.setTarget(cx+(j%cols)*8+2,bottom-Math.floor(j/cols)*8,true); });
+        cx+=barW+barSp;
+    });
+    particles.forEach(p=>{ const y=parseInt(p.data['Year Initiated']); if(isNaN(y)||y<2006||y>2026){p.frozen=false;p.setTarget(-100,-100,false);} });
+}
+
+function layoutByFramework(){
+    if(!p5Instance) return; clearLabels();
+    const w=p5Instance.width, bottom=bY();
+    // equal spacing everywhere — same barSp between all bars including across the gap
+    const barSp=42, maxCols=5, dotSp=8, barW=maxCols*dotSp;
+    const fLaw={}, sLaw={};
+    particles.forEach(p=>{
+        const prov=p.data['Legal Provision'];
+        if(FORMAL_LAW.includes(prov)){if(!fLaw[prov])fLaw[prov]=[];fLaw[prov].push(p);}
+        else if(SOFT_LAW.includes(prov)){if(!sLaw[prov])sLaw[prov]=[];sLaw[prov].push(p);}
+    });
+    const fKeys=FORMAL_LAW.filter(k=>fLaw[k]?.length);
+    const sKeys=SOFT_LAW.filter(k=>sLaw[k]?.length);
+    const allCount=fKeys.length+sKeys.length;
+    const totalW=allCount*barW+(allCount-1)*barSp;
+    let cx=(w-totalW)/2;
+
+    // track x extents for brackets
+    const fStartX=cx;
+    fKeys.forEach(cat=>{
+        addAxisLabel(cat.replace('Indigenous Law','Indig. Law').replace('Declaration','Decl.'),cx);
+        sortByStatus(fLaw[cat]);
+        fLaw[cat].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+2,bottom-Math.floor(j/maxCols)*dotSp,true);});
+        cx+=barW+barSp;
+    });
+    const fEndX=cx-barSp; // right edge of last formal bar
+
+    const sStartX=cx;
+    sKeys.forEach(cat=>{
+        addAxisLabel(cat.replace('Civil Society Declaration','CS Decl.').replace('Indigenous Declaration','Indig. Decl.').replace('Civil Society Tribunal','CS Tribunal').replace('Private Sector Governance','Priv.').replace('Position Statement','Pos.'),cx);
+        sortByStatus(sLaw[cat]);
+        sLaw[cat].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+2,bottom-Math.floor(j/maxCols)*dotSp,true);});
+        cx+=barW+barSp;
+    });
+    const sEndX=cx-barSp; // right edge of last soft bar
+
+    particles.forEach(p=>{ if(!FORMAL_LAW.includes(p.data['Legal Provision'])&&!SOFT_LAW.includes(p.data['Legal Provision'])){p.frozen=false;p.setTarget(-100,-100,false);} });
+
+    // Store bracket info for drawing — picked up in draw loop via global
+    frameworkBrackets=[
+        {x:fStartX, w:fEndX-fStartX, label:'Formal Law'},
+        {x:sStartX, w:sEndX-sStartX, label:'Soft Law'},
+    ];
+}
+
+// Drawn each frame in drawFrameworkBrackets(), called from p5 draw
+let frameworkBrackets=[];
+
+function drawFrameworkBrackets(p){
+    if(!frameworkBrackets.length) return;
+    // axis-labels-container sits at top:78vh, main-labels at top:84vh
+    // bracket bar sits between them: at ~81vh in canvas coords
+    const bracketY=p.height*0.815;
+    const bracketH=3;
+    const labelColor=p5Instance.color('#999');
+    frameworkBrackets.forEach(b=>{
+        // bracket rectangle
+        p.noStroke();
+        p.fill(labelColor);
+        p.rect(b.x, bracketY, b.w, bracketH, 2);
+        // group label centred below bracket
+        p.fill(labelColor);
+        p.textFont('Geist Mono');
+        p.textSize(10);
+        p.textAlign(p.CENTER, p.TOP);
+        p.text(b.label, b.x+b.w/2, bracketY+bracketH+5);
+        p.textAlign(p.LEFT, p.BASELINE);
+    });
+}
+
+function layoutByStatus(){
+    if(!p5Instance) return; clearLabels();
+    const w=p5Instance.width, bottom=bY();
+    const CANONICAL=['Applied','Drafted','Submitted','Failed'];
+    function norm(s){ const l=(s||'').trim().toLowerCase(); if(l.startsWith('app'))return'Applied'; if(l.startsWith('dra'))return'Drafted'; if(l.startsWith('sub'))return'Submitted'; if(l.startsWith('fai'))return'Failed'; return null; }
+    const st={}; CANONICAL.forEach(c=>st[c]=[]);
+    particles.forEach(p=>{ const n=norm(p.data.Status); if(n)st[n].push(p); });
+    const keys=CANONICAL.filter(c=>st[c].length); if(!keys.length)return;
+    const dotSp=8,maxCols=8,barSp=42,barW=maxCols*dotSp,totalW=keys.length*barW+(keys.length-1)*barSp;
+    let cx=(w-totalW)/2;
+    keys.forEach(s=>{ sortByNature(st[s]); addAxisLabel(s,cx); st[s].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+3,bottom-Math.floor(j/maxCols)*dotSp,true);}); cx+=barW+barSp; });
+    particles.forEach(p=>{ if(!norm(p.data.Status)){p.frozen=false;p.setTarget(-100,-100,false);} });
+}
+
+function layoutByNature(){
+    if(!p5Instance) return; clearLabels();
+    const w=p5Instance.width, bottom=bY();
+    const groups={'All Nature':[],'Animal':[],'Plant + Forest':[],'Water':[],'Land':[],'Other':[],'Multiple':[]};
+    particles.forEach(p=>groups[getNatureCat(p.data['Nature Type'])].push(p));
+    const keys=NATURE_ORDER.filter(k=>groups[k].length);
+    const dotSp=8,maxCols=8,barSp=42,barW=maxCols*dotSp,totalW=keys.length*barW+(keys.length-1)*barSp;
+    let cx=(w-totalW)/2;
+    keys.forEach(g=>{ addAxisLabel(g,cx); groups[g].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+3,bottom-Math.floor(j/maxCols)*dotSp,true);}); cx+=barW+barSp; });
+}
+
+/* ════════════════════════════════════════════════════
+   SORT HELPERS
+════════════════════════════════════════════════════ */
+function sortByYear(arr){arr.sort((a,b)=>(parseInt(a.data['Year Initiated'])||9999)-(parseInt(b.data['Year Initiated'])||9999));}
+function sortByFramework(arr){arr.sort((a,b)=>{const ia=FRAMEWORK_ORDER.indexOf(a.data['Legal Provision']||''),ib=FRAMEWORK_ORDER.indexOf(b.data['Legal Provision']||'');return(ia<0?999:ia)-(ib<0?999:ib);});}
+function sortByStatus(arr){arr.sort((a,b)=>{const ia=['Approved','Draft','Failed','Submitted'].findIndex(s=>(a.data['Status']||'').toLowerCase().startsWith(s.toLowerCase())),ib=['Approved','Draft','Failed','Submitted'].findIndex(s=>(b.data['Status']||'').toLowerCase().startsWith(s.toLowerCase()));return(ia<0?999:ia)-(ib<0?999:ib);});}
+function sortByNature(arr){arr.sort((a,b)=>NATURE_ORDER.indexOf(getNatureCat(a.data['Nature Type']))-NATURE_ORDER.indexOf(getNatureCat(b.data['Nature Type'])));}
+function getNatureCat(t){
+    if(!t||t.includes('|'))return'Multiple';
+    const l=t.toLowerCase();
+    if(l.includes('all')||l.includes('general'))return'All Nature';
+    if(l.includes('animal')||l.includes('species'))return'Animal';
+    if(l.includes('plant')||l.includes('forest')||l.includes('fungi'))return'Plant + Forest';
+    if(l.includes('marine')||l.includes('ocean')||l.includes('river')||l.includes('lake')||l.includes('fresh')||l.includes('wetland')||l.includes('arctic'))return'Water';
+    if(l.includes('grass')||l.includes('mountain')||l.includes('desert'))return'Land';
+    if(l.includes('space')||l.includes('urban')||l.includes('climate'))return'Other';
+    return'Multiple';
+}
+
+/* ════════════════════════════════════════════════════
+   CAROUSEL (static content, built once data loads)
+════════════════════════════════════════════════════ */
+function buildCarousel(){
+    const container=document.getElementById('initiative-carousel');
+    const sample=data.filter(r=>r.Title&&r['Cover Image']).slice(0,10);
+    // If fewer than 10 have cover images, pad with any that have titles
+    const extra=data.filter(r=>r.Title&&!r['Cover Image']);
+    while(sample.length<10&&extra.length) sample.push(extra.shift());
+    container.innerHTML=sample.slice(0,10).map(d=>{
+        const img=(d['Cover Image']||'').trim();
+        const bgStyle=img?`background-image:url('${img}')`:`background:#C8C8B8`;
+        return `
+        <div class="init-panel">
+            <div class="init-panel-bg" style="${bgStyle}"></div>
+            <div class="init-panel-content">
+                <div class="init-card-title">${d.Title||'Unknown Initiative'}</div>
+                <div class="init-card-meta">
+                    ${d['Year Initiated']||'—'} &nbsp;·&nbsp;
+                    ${(d.Status||'—').trim()} &nbsp;·&nbsp;
+                    ${d.Region||'—'}
+                </div>
+                ${d.Permalink?`<a class="init-card-link" href="${d.Permalink}" target="_blank">View initiative ↗</a>`:''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+/* ════════════════════════════════════════════════════
+   FAQ ACCORDION
+════════════════════════════════════════════════════ */
+document.querySelectorAll('.faq-q').forEach(q=>{
+    q.addEventListener('click',()=>{
+        const a=q.nextElementSibling;
+        const isOpen=a.classList.contains('open');
+        // close all
+        document.querySelectorAll('.faq-a.open').forEach(x=>x.classList.remove('open'));
+        document.querySelectorAll('.faq-q.open').forEach(x=>x.classList.remove('open'));
+        if(!isOpen){ a.classList.add('open'); q.classList.add('open'); }
+    });
+});
+</script>
+</body>
+</html>
