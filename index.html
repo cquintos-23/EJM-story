@@ -12,11 +12,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Geist Mono',monospace; background:#F5F5F5; color:#3D3D31; overflow-x:hidden; }
+    body { font-family:'Geist Mono',monospace; background:#FBFBEE; color:#3D3D31; overflow-x:hidden; }
 
     /* ── SCROLLYTELLING VIEWPORT ── */
-    #scroll-container { pointer-events:none; }
-    .scroll-section { height:200vh; width:100%; pointer-events:none; }
+    #scrolly {
+        position:relative;
+    }
+    .scroll-step {
+        height:100vh; width:100%;
+        pointer-events:none;
+    }
+    .scroll-step.short { height:60vh; }
 
     /* ── FIXED CANVAS ── */
     #p5-canvas { position:fixed; top:0; left:0; width:100%; height:100vh; z-index:1; cursor:default; }
@@ -25,12 +31,13 @@
     #fixed-overlays {
         position:fixed; top:0; left:0; width:100%; height:100vh;
         z-index:30; pointer-events:none;
-        display:flex; align-items:center; justify-content:center;
+        display:flex; align-items:flex-start; justify-content:center;
+        padding-top:4vh;
     }
 
     /* pill shared style */
     .pill {
-        background:#fff; border:1.5px solid #3D3D31; border-radius:24px;
+        background:#FBFBEE; border:1.5px solid #3D3D31; border-radius:24px;
         padding:0.85rem 2rem; text-align:center;
         font-family:'Times New Roman',Georgia,serif; color:#3D3D31;
         opacity:0; transition:opacity 0.45s ease;
@@ -49,16 +56,30 @@
         z-index:30; max-width:300px; pointer-events:none;
         opacity:0; transition:opacity 0.4s ease;
     }
+    #narrative-text.visible {
+        pointer-events:auto;
+    }
     #narrative-text p {
         font-family:'Geist',sans-serif; font-size:0.95rem; font-weight:400;
         color:#3D3D31; line-height:1.65;
-        background:rgba(245,245,245,0.92); padding:1rem 1.2rem;
+        background:rgba(251,251,238,0.92); padding:1rem 1.2rem;
         border-radius:8px; backdrop-filter:blur(4px);
     }
+    #narrative-text a { color:#3D3D31; font-weight:600; }
+    #narrative-text a:hover { text-decoration:none; }
+    #narrative-text.has-links { pointer-events:auto; }
     .cursor { display:inline-block; width:2px; height:1em; background:#3D3D31;
         margin-left:2px; vertical-align:text-bottom;
         animation:blink 0.7s step-end infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* country name display when country selected */
+    #country-name-display {
+        position:fixed; top:4vh; left:0; width:100%; text-align:center;
+        z-index:30; pointer-events:none; opacity:0; transition:opacity 0.3s ease;
+        font-family:'Geist',sans-serif; font-size:0.95rem; font-weight:400;
+        color:#3D3D31; line-height:1.65;
+    }
 
     /* skip */
     #skip-btn {
@@ -71,9 +92,9 @@
     #skip-btn:hover { background:#555; }
 
     /* chart labels */
-    #axis-labels-container { position:fixed; top:78vh; left:0; width:100%; height:40px; pointer-events:auto; z-index:15; }
-    #main-labels-container  { position:fixed; top:84vh; left:0; width:100%; height:30px; pointer-events:none; z-index:15; }
-    .chart-label { position:absolute; font-family:'Geist Mono',monospace; font-size:7pt; font-weight:500; color:#666; white-space:nowrap; pointer-events:none; }
+    #axis-labels-container { position:fixed; top:78vh; left:0; width:100%; height:40px; pointer-events:auto; z-index:15; opacity:0; transition:opacity 0.3s ease; }
+    #main-labels-container  { position:fixed; top:84vh; left:0; width:100%; height:30px; pointer-events:none; z-index:15; opacity:0; transition:opacity 0.3s ease; }
+    .chart-label { position:absolute; font-family:'Geist Mono',monospace; font-size:7pt; font-weight:500; color:#666; white-space:nowrap; pointer-events:none; transform:translateX(-50%); }
     .chart-label.main { font-size:10pt; font-weight:600; color:#3D3D31; }
     .chart-label.axis.clickable { pointer-events:auto; cursor:pointer; color:#3D3D31; }
     .chart-label.axis.clickable:hover { text-decoration:underline; }
@@ -112,8 +133,8 @@
     ═══════════════════════════════════ */
     #static-content {
         position:relative; z-index:5;
-        background:#F5F5F5;
-        padding:80px 5vw 120px;
+        background:#FBFBEE;
+        padding:40px 5vw 120px;
     }
 
     /* end buttons */
@@ -122,9 +143,9 @@
         margin-bottom:80px;
     }
     .end-btn {
-        display:block; width:220px; text-align:center;
+        display:block; width:580px; max-width:90vw; text-align:center;
         padding:0.75rem 0;
-        background:#ffffff; border:1.5px solid #3D3D31; border-radius:999px;
+        background:#FBFBEE; border:1.5px solid #3D3D31; border-radius:999px;
         font-family:'Geist',sans-serif; font-size:1rem; font-weight:600;
         color:#3D3D31; text-decoration:none; cursor:pointer;
         transition:background .2s;
@@ -180,9 +201,23 @@
     }
     #faq-section {
         width:100%; max-width:760px;
-        background:#fff; border:1.5px solid #3D3D31; border-radius:20px;
-        padding:8px 40px 24px;
+        padding:8px 0 24px;
     }
+    #faq-header {
+        display:flex; align-items:baseline; justify-content:space-between;
+        margin-bottom:28px;
+    }
+    #faq-title {
+        font-family:'Geist',sans-serif; font-size:1.6rem;
+        font-weight:700; color:#3D3D31;
+    }
+    #faq-expand-all {
+        font-family:'Geist',sans-serif; font-size:0.8rem; font-weight:600;
+        color:#3D3D31; background:none; border:1px solid #3D3D31;
+        border-radius:999px; padding:0.3rem 0.9rem; cursor:pointer;
+        transition:background 0.2s;
+    }
+    #faq-expand-all:hover { background:#9FD4F4; border-color:#9FD4F4; }
     .faq-q {
         font-family:'Times New Roman',Georgia,serif; font-size:1.05rem;
         font-weight:700; color:#3D3D31; cursor:pointer;
@@ -190,12 +225,17 @@
         position:relative; user-select:none;
     }
     .faq-q:first-child { border-top:none; }
+    #faq-header + .faq-q { border-top:none; }
     .faq-q::after {
-        content:'＋'; position:absolute; right:0; top:50%;
-        transform:translateY(-50%); font-size:1.2rem; font-weight:400;
-        transition:transform .25s;
+        content:'+'; position:absolute; right:0; top:50%;
+        transform:translateY(-50%) rotate(0deg);
+        font-size:1.2rem; font-weight:400;
+        transition:transform 0.3s ease;
+        display:inline-block;
     }
-    .faq-q.open::after { content:'−'; }
+    .faq-q.open::after {
+        transform:translateY(-50%) rotate(135deg);
+    }
     .faq-a {
         font-family:'Geist',sans-serif; font-size:0.93rem; font-weight:400;
         color:#3D3D31; line-height:1.7;
@@ -204,6 +244,8 @@
     }
     .faq-a.open { max-height:600px; padding-bottom:20px; }
     .faq-a p+p { margin-top:10px; }
+    .faq-a a { color:#3D3D31; font-weight:600; }
+    .faq-a a:hover { opacity:0.7; }
     </style>
 </head>
 <body>
@@ -215,6 +257,7 @@
     <div id="hero-text"   class="pill">Explore the definitive tracker<br>of ecocentric laws around the world</div>
     <div id="stats-display" class="pill"><span id="stat-initiatives">0</span> Initiatives<span class="sep">·</span><span id="stat-countries">0</span> Countries<span class="sep">·</span>1 Movement</div>
 </div>
+<div id="country-name-display"></div>
 <div id="narrative-text"><p id="narrative-p"></p></div>
 <button id="skip-btn">skip →</button>
 
@@ -235,18 +278,22 @@
 <!-- Canvas -->
 <div id="p5-canvas"></div>
 
-<!-- Scrollytelling spacers -->
-<div id="scroll-container">
-    <div class="scroll-section" data-section="s0-hero"></div>
-    <div class="scroll-section" data-section="s1-stats"></div>
-    <div class="scroll-section" data-section="s2-narrate1"></div>
-    <div class="scroll-section" data-section="s3-narrate2"></div>
-    <div class="scroll-section" data-section="s4-regions"></div>
-    <div class="scroll-section" data-section="s5-year"></div>
-    <div class="scroll-section" data-section="s6-framework"></div>
-    <div class="scroll-section" data-section="s7-status"></div>
-    <div class="scroll-section" data-section="s8-nature"></div>
-    <div class="scroll-section" data-section="s9-end"></div>
+<!-- Scrollytelling: fixed canvas reacts to step intersections -->
+<div id="scrolly">
+    <div class="scroll-step" data-section="s0-hero"></div>
+    <div class="scroll-step" data-section="s1-stats"></div>
+    <div class="scroll-step" data-section="s2-narrate"></div>
+    <div class="scroll-step" data-section="s3-regions"></div>
+    <div class="scroll-step" data-section="s4-regions-linger"></div>
+    <div class="scroll-step" data-section="s5-year"></div>
+    <div class="scroll-step" data-section="s6-year-linger"></div>
+    <div class="scroll-step" data-section="s7-framework"></div>
+    <div class="scroll-step" data-section="s8-framework-linger"></div>
+    <div class="scroll-step" data-section="s9-status"></div>
+    <div class="scroll-step" data-section="s10-status-linger"></div>
+    <div class="scroll-step" data-section="s11-nature"></div>
+    <div class="scroll-step" data-section="s12-nature-linger"></div>
+    <div class="scroll-step short" data-section="s13-end"></div>
 </div>
 
 <!-- ═══ STATIC CONTENT ═══ -->
@@ -254,8 +301,8 @@
 
     <!-- End buttons -->
     <div id="end-buttons">
-        <a class="end-btn" href="#">Map Builder</a>
-        <a class="end-btn" href="#">Initiative Index</a>
+        <a class="end-btn" href="#">Build your own maps and charts</a>
+        <a class="end-btn" href="#">Explore all initiatives</a>
     </div>
 
     <!-- Initiative carousel -->
@@ -266,29 +313,45 @@
     <!-- FAQ accordion -->
     <div id="faq-wrapper">
     <div id="faq-section">
-        <div class="faq-q">What is Ecological Jurisprudence?</div>
-        <div class="faq-a"><p>Ecological jurisprudence is a broad field of legal theory and practice that recognises the rights of nature and the intrinsic value of ecosystems. It challenges human-centred legal frameworks by placing ecological health at the centre of law.</p><p>Drawing on Earth jurisprudence, indigenous legal traditions, and rights-of-nature scholarship, ecological jurisprudence seeks to transform how legal systems relate to the living world.</p></div>
 
-        <div class="faq-q">What do we include?</div>
-        <div class="faq-a"><p>We track legal initiatives from around the world that formally recognise the rights, interests, or legal personhood of nature — whether through constitutions, legislation, court cases, policies, or civil society instruments.</p><p>We include both formal law (state-enacted) and soft law (civil society declarations, tribunals, and governance frameworks) that meaningfully advance ecological jurisprudence.</p></div>
+        <div id="faq-header">
+            <span id="faq-title">Frequently Asked Questions</span>
+            <button id="faq-expand-all">Expand all</button>
+        </div>
 
-        <div class="faq-q">What types of legal initiatives are included?</div>
-        <div class="faq-a"><p>Initiatives span constitutions, national and subnational legislation, court cases, executive policies, formal declarations, indigenous law, civil society declarations and tribunals, private sector governance frameworks, and position statements.</p><p>Each initiative is categorised by its primary legal form and mapped to a region and one or more nature types.</p></div>
+        <div class="faq-q">How many rights of nature are there?</div>
+        <div class="faq-a"><p>As of 2026, we have tracked 683 eco jurisprudence initiatives in 63 countries and territories. 512 of them are rights of nature. Yes, there is a difference. Check out our <a href="https://ecojurisprudence.org/?post_type=ejm_initiative" target="_blank">initiative index</a> to explore the beautiful diversity of the movement.</p></div>
 
-        <div class="faq-q">What types of eco jurisprudence are included?</div>
-        <div class="faq-a"><p>We include initiatives protecting all nature types: water bodies (rivers, lakes, oceans, wetlands), forests and plants, animals and species, land-based ecosystems (mountains, grasslands, deserts), climate and atmospheric systems, and initiatives granting rights to nature as a whole.</p><p>Initiatives covering multiple nature types or entire ecosystems are categorised accordingly.</p></div>
+        <div class="faq-q">Wait, there is more than the rights of nature?</div>
+        <div class="faq-a"><p>We track all kinds of ecocentric law around the world. Next to the rights of nature, we monitor eco-governance systems, indigenous models, personhood, animal rights, and local eco knowledge. Our <a href="https://ecojurisprudence.org/codebook/" target="_blank">codebook</a> has all the definitions you need.</p></div>
 
-        <div class="faq-q">How we gather this data</div>
-        <div class="faq-a"><p>Data is gathered through a combination of continuous monitoring of legal journals, news sources, government publications, and civil society reports. Our team reviews and verifies each initiative before it is added to the tracker.</p><p>We also rely on a global network of partners and contributors who notify us of new or updated initiatives in their regions.</p></div>
+        <div class="faq-q">What else do you track?</div>
+        <div class="faq-a"><p>For every initiative, we try to gather as much information as possible: who, what, when, where, how, why? That means a lot of boring and many more exciting rabbit holes. Have you ever heard about the <a href="https://ecojurisprudence.org/initiatives/west-papau-green-state-vision/" target="_blank">disputed Indonesian province of West Papua</a>? Well, now you did.</p></div>
 
-        <div class="faq-q">How we track: a participatory model</div>
-        <div class="faq-a"><p>The EJM operates on a participatory model: anyone can submit a new initiative or correction through our data request form. Submissions are reviewed by our editorial team before being published.</p><p>Regional representatives help maintain accuracy within their areas of expertise, ensuring the tracker reflects ground-level developments.</p></div>
+        <div class="faq-q">You do have some mistakes on the website!</div>
+        <div class="faq-a"><p>We are doing our very best to be the most reliable database on global ecocentric law. We are also humans and make mistakes. If you find one or more, please <a href="https://ecojurisprudence.org/contact/" target="_blank">let us know</a> and we will fix them as quick as we can. An initiative is missing? Please <a href="https://ecojurisprudence.org/new-initiative/" target="_blank">tell us that too</a>. We rely on our community. Thank you!</p></div>
 
-        <div class="faq-q">To meet our criteria, an initiative must:</div>
-        <div class="faq-a"><p>Have a formal legal basis or documented civil society status. Explicitly reference the rights, interests, or legal standing of nature or a specific ecosystem. Be verifiable through primary or credible secondary sources. Have been initiated or formally recognised from 2006 onwards (or be a documented precursor of contemporary movements).</p></div>
+        <div class="faq-q">Can I use your data?</div>
+        <div class="faq-a"><p>Yes, please do. All of our data is under a <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.en" target="_blank">CC BY-SA 4.0 license</a> and follows additional <a href="https://ecojurisprudence.org/data-ethics/" target="_blank">data ethics</a>. That means you can use and adapt it for all the projects you want, even commercially. We only ask you to cite us properly and to continue the spirit of open knowledge. <a href="https://ecojurisprudence.org/contact/" target="_blank">Let us know</a> about what you do. We are always excited to hear about, collaborate on, promote, or support your project in any way we can.</p></div>
 
-        <div class="faq-q">How to cite/use the data</div>
-        <div class="faq-a"><p>Data from the Eco Jurisprudence Monitor may be used freely for research, journalism, education, and advocacy with attribution. Please cite as: Eco Jurisprudence Monitor (year). Initiative Tracker. ecojurisprudence.org.</p><p>For bulk data requests or partnership enquiries, please use the data request form linked in the navigation.</p></div>
+        <div class="faq-q">Who pays for all of this?</div>
+        <div class="faq-a"><p>We wouldn't be here without generous grants from the <a href="https://www.rbf.org/" target="_blank">Rockefeller Brothers Fund</a>, <a href="https://environmentnow.org/" target="_blank">Environment Now</a>, and countless hours of <a href="https://ecojurisprudence.org/about-2/" target="_blank">a small group</a> of priceless academics, dedicated volunteers, topical and regional experts, motivated interns, and a luckily growing EJM community. You can also support us directly by <a href="https://ecomm.uoregon.edu/select/5501898/1773290563" target="_blank">donation</a>.</p></div>
+
+        <div class="faq-q">I want some names!</div>
+        <div class="faq-a"><p><a href="https://cas.uoregon.edu/directory/political-science/all/ckauffma" target="_blank">Craig</a> is the Principal Investigator and Executive Director of this project. <a href="https://www.linkedin.com/in/cat-haas/" target="_blank">Cat</a> is the managing director and only full-time employee of this research project. We are supported by many more people that you can find on our <a href="https://ecojurisprudence.org/about-2/" target="_blank">About page</a>.</p></div>
+
+        <div class="faq-q">Why are you doing this?</div>
+        <div class="faq-a"><p>Because ecocentric law is inspiring! In fact, it is so inspiring that we want people to know all about it. We believe in rigorous research and superb science communication. We also believe that facts should inform opinions, not the other way around.</p></div>
+
+        <div class="faq-q">Speaking of science communication, your website is pretty nice! Who made it?</div>
+        <div class="faq-a"><p>You are seeing the result of years of work, of frustration, and steep learning curves. You would not believe how difficult it is to make something look easy. We had amazing people doing amazing things and are very proud of how it turned out. Special thanks to our website 2.0 designer <a href="https://www.louischarron.io/" target="_blank">Louis</a> and our data-viz-ard <a href="https://www.carmenquintos.com/" target="_blank">Carmen</a>.</p></div>
+
+        <div class="faq-q">But you still use a Eurocentric world map? Ugh.</div>
+        <div class="faq-a"><p>While designing the page, we thought about using many different projections that would reflect our core values: Dymaxion, South-up, Waterman Butterfly… you name them. Ask our cartographer-in-chief <a href="https://www.linkedin.com/in/alex-putzer/" target="_blank">Alex</a> about it. For all of our design choices, we were looking for the ideal combination between innovation and feasibility. Eventually, it always all boils down to <a href="https://www.w3.org/WAI/standards-guidelines/wcag/" target="_blank">accessibility</a> in its many shapes and forms. Hey, at least it's not Mercator.</p></div>
+
+        <div class="faq-q">Ok, this all sounds very cool. Can I work for you?</div>
+        <div class="faq-a"><p>Of course you can! We are always looking for new people that can help to make this project better. We don't really have the funds to pay you, but we are more than happy to support you in finding some. <a href="https://ecojurisprudence.org/contact/" target="_blank">When in doubt, reach out!</a></p></div>
+
     </div><!-- /faq-section -->
     </div><!-- /faq-wrapper -->
 
@@ -310,6 +373,8 @@ let statsAnimated=false;
 let particleMapPos=[];
 let hoveredCountry=null;   // GeoJSON feature currently under mouse
 let countryCounts={};      // country name → initiative count, built after data loads
+let selectedCountry=null;  // GeoJSON feature name currently clicked
+let selectedCountryParticles=new Set(); // particles for selected country
 
 /* ════════════════════════════════════════════════════
    CONSTANTS
@@ -403,7 +468,8 @@ function resolveCountryCounts(){
 }
 function buildProjection(w,h){
     if (!worldGeoJson) return null;
-    return d3.geoNaturalEarth1().fitExtent([[30,10],[w-30,h-10]],worldGeoJson);
+    const offsetY=h*0.05;
+    return d3.geoNaturalEarth1().fitExtent([[30,10+offsetY],[w-30,h-10+offsetY]],worldGeoJson);
 }
 
 /* ════════════════════════════════════════════════════
@@ -412,7 +478,7 @@ function buildProjection(w,h){
 Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vSKgeCFRWhEydDOm3JMjw-F9MI8bNvgWYkXSA-_3S8Mo9Ehxs3WrB07UbNfrFdfDiOLqHc67BR6kyaG/pub?gid=600477657&single=true&output=csv',{
     download:true, header:true,
     complete(results){
-        data=results.data.filter(r=>r.Region);
+        data=results.data.filter(r=>r.Region && (r["Carmen's "]||'').trim().toLowerCase()==='aa');
         // Build raw count keyed by data's Country string
         const rawCounts={};
         data.forEach(r=>{
@@ -458,14 +524,20 @@ class Particle {
     update(){ if(this.frozen)return; this.x+=(this.targetX-this.x)*0.08; this.y+=(this.targetY-this.y)*0.08; }
     display(){
         if(!this.visible) return;
-        const isSel=selectedParticle===this, hasSel=selectedParticle!==null;
+        const isSel=selectedParticle===this;
+        const isCountrySel=selectedCountryParticles.has(this);
+        const hasSel=selectedParticle!==null;
+        const hasCountrySel=selectedCountry!==null;
         p5Instance.noStroke();
         if(hasSel&&!isSel){ const c=p5Instance.color(this.color); c.setAlpha(35); p5Instance.fill(c); }
         else if(isSel){
-            p5Instance.noFill(); p5Instance.stroke(this.color); p5Instance.strokeWeight(1.5);
-            p5Instance.circle(this.x,this.y,this.size+8);
             p5Instance.noStroke(); p5Instance.fill(this.color);
-            p5Instance.circle(this.x,this.y,this.size+2); return;
+            p5Instance.circle(this.x,this.y,this.size); return;
+        } else if(hasCountrySel&&isCountrySel){
+            p5Instance.noStroke(); p5Instance.fill(this.color);
+            p5Instance.circle(this.x,this.y,this.size); return;
+        } else if(hasCountrySel&&!isCountrySel){
+            const c=p5Instance.color(this.color); c.setAlpha(35); p5Instance.fill(c);
         } else { p5Instance.fill(this.color); }
         p5Instance.circle(this.x,this.y,this.size);
     }
@@ -489,7 +561,7 @@ function initViz(){
             show('hero-text');
         };
         p.draw=function(){
-            p.background('#F5F5F5');
+            p.background('#FBFBEE');
             if(showMap&&worldGeoJson&&mapProjection) drawMap(p);
             particles.forEach(pt=>{pt.update();pt.display();});
             if(frameworkBrackets.length) drawFrameworkBrackets(p);
@@ -499,11 +571,20 @@ function initViz(){
             p.pixelDensity(window.devicePixelRatio||2);
             p.resizeCanvas(window.innerWidth,window.innerHeight);
             mapProjection=buildProjection(p.width,p.height);
-            cacheMapPositions(); onSectionEnter(currentSection);
+            cacheMapPositions(); onSectionEnter(currentSection||'s0-hero');
         };
         p.mouseMoved=function(){
             const ttEl=document.getElementById('tooltip');
             const ctEl=document.getElementById('country-tooltip');
+            // Block interaction when mouse is over the narrative box
+            const narrativeBox=document.getElementById('narrative-text');
+            if(narrativeBox.classList.contains('visible')){
+                const nr=narrativeBox.getBoundingClientRect();
+                if(p.mouseX>=nr.left&&p.mouseX<=nr.right&&p.mouseY>=nr.top&&p.mouseY<=nr.bottom){
+                    ttEl.style.display='none'; ctEl.style.display='none';
+                    hoveredCountry=null; p.canvas.style.cursor='default'; return;
+                }
+            }
             if(selectedParticle){ttEl.style.display='none'; ctEl.style.display='none'; hoveredCountry=null; return;}
             const found=findParticle(p.mouseX,p.mouseY);
             if(found){
@@ -527,12 +608,15 @@ function initViz(){
                         }
                     }
                     if(hit){
+                        const n=countryCounts[hit.properties.name]||0;
+                        if(n===0){ hoveredCountry=null; ctEl.style.display='none'; p.canvas.style.cursor='default'; }
+                        else {
                         hoveredCountry=hit.properties.name;
-                        const n=countryCounts[hoveredCountry]||0;
                         ctEl.textContent=`${hoveredCountry}: ${n} initiative${n!==1?'s':''}`;
                         ctEl.style.display='block';
                         ctEl.style.left=(p.mouseX+14)+'px'; ctEl.style.top=(p.mouseY-8)+'px';
                         p.canvas.style.cursor='default';
+                        }
                     } else {
                         hoveredCountry=null; ctEl.style.display='none';
                         p.canvas.style.cursor='default';
@@ -544,18 +628,52 @@ function initViz(){
             }
         };
         p.mouseClicked=function(){
+            const narrativeBox=document.getElementById('narrative-text');
+            if(narrativeBox.classList.contains('visible')){
+                const nr=narrativeBox.getBoundingClientRect();
+                if(p.mouseX>=nr.left&&p.mouseX<=nr.right&&p.mouseY>=nr.top&&p.mouseY<=nr.bottom) return;
+            }
             const found=findParticle(p.mouseX,p.mouseY);
-            if(found){ selectedParticle===found?hidePinned():showPinned(found); }
-            else hidePinned();
+            if(found){ selectedCountry=null; selectedCountryParticles.clear(); selectedParticle===found?hidePinned():showPinned(found); }
+            else if(showMap&&worldGeoJson&&mapProjection){
+                const inv=mapProjection.invert&&mapProjection.invert([p.mouseX,p.mouseY]);
+                let hit=null;
+                if(inv){ for(const f of worldGeoJson.features){ if(d3.geoContains(f,inv)){ hit=f; break; } } }
+                if(hit&&(countryCounts[hit.properties.name]||0)>0){
+                    const cname=hit.properties.name;
+                    if(selectedCountry===cname){ hidePinned(); }
+                    else {
+                        selectedParticle=null;
+                        selectedCountry=cname;
+                        selectedCountryParticles.clear();
+                        particles.forEach(pt=>{
+                            const dc=(pt.data.Country||'').trim().toLowerCase();
+                            const gn=cname.toLowerCase();
+                            if(dc===gn||dc.includes(gn)||gn.includes(dc)) selectedCountryParticles.add(pt);
+                        });
+                        document.getElementById('pinned-tooltip').style.display='none';
+                        const nd=document.getElementById('country-name-display');
+                        nd.textContent=cname;
+                        nd.style.opacity='1';
+                    }
+                } else { hidePinned(); }
+            } else { hidePinned(); }
         };
     });
     setupObserver();
-    document.getElementById('skip-btn').addEventListener('click',()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}));
+    document.getElementById('skip-btn').addEventListener('click',()=>document.getElementById('static-content').scrollIntoView({behavior:'smooth'}));
     document.getElementById('pt-close').addEventListener('click',hidePinned);
     window.addEventListener('scroll',()=>{
         if(selectedParticle) positionPinnedTooltip();
         const pct=window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100;
         document.getElementById('progress-bar-fill').style.width=pct+'%';
+        // Hide country name once map builder button is visible; restore when scrolled back up
+        const staticEl=document.getElementById('static-content');
+        if(staticEl && selectedCountry){
+            const rect=staticEl.getBoundingClientRect();
+            const nd=document.getElementById('country-name-display');
+            nd.style.opacity=(rect.top<=window.innerHeight)?'0':'1';
+        }
     });
 }
 
@@ -570,7 +688,9 @@ function drawMap(p){
     worldGeoJson.features.forEach(feat=>{
         const name=feat.properties.name;
         ctx.beginPath(); pathGen(feat);
-        if(name===hoveredCountry){
+        if(name===selectedCountry){
+            ctx.fillStyle='rgba(61,61,49,0.42)';
+        } else if(name===hoveredCountry){
             ctx.fillStyle='rgba(61,61,49,0.28)';
         } else if(highlightCountries.has(name)){
             ctx.fillStyle='rgba(61,61,49,0.13)';
@@ -612,11 +732,14 @@ function findParticle(mx,my,r=8){
 }
 function positionPinnedTooltip(){
     if(!selectedParticle) return;
+    const el=document.getElementById('pinned-tooltip');
+    // Hide tooltip if particle is not visible (e.g. pre-2006 in year chart)
+    if(!selectedParticle.visible){ el.style.display='none'; return; }
+    el.style.display='block';
     let left=selectedParticle.x+14, top=selectedParticle.y-40;
     if(left+220>window.innerWidth-10) left=selectedParticle.x-234;
     if(top<10) top=10;
     if(top+90>window.innerHeight-10) top=window.innerHeight-100;
-    const el=document.getElementById('pinned-tooltip');
     el.style.left=left+'px'; el.style.top=top+'px';
 }
 function showPinned(p){
@@ -627,26 +750,36 @@ function showPinned(p){
     document.getElementById('pinned-tooltip').style.display='block';
     positionPinnedTooltip();
 }
-function hidePinned(){ selectedParticle=null; document.getElementById('pinned-tooltip').style.display='none'; }
+function hidePinned(){
+    selectedParticle=null; selectedCountry=null; selectedCountryParticles.clear();
+    document.getElementById('pinned-tooltip').style.display='none';
+    document.getElementById('country-name-display').style.opacity='0';
+}
 
 /* ════════════════════════════════════════════════════
    TYPEWRITER
 ════════════════════════════════════════════════════ */
-function typewrite(text, onDone){
+function typewrite(text, onDone, finalHTML){
     clearTimeout(typewriterTimer);
     const pel=document.getElementById('narrative-p');
     const box=document.getElementById('narrative-text');
-    box.style.opacity='1'; pel.innerHTML=''; let i=0;
+    box.style.opacity='1'; box.classList.remove('has-links'); box.classList.add('visible');
+    pel.innerHTML=''; let i=0;
     function tick(){
         pel.innerHTML=text.slice(0,i)+'<span class="cursor"></span>';
         if(i<text.length){i++; typewriterTimer=setTimeout(tick,17);}
-        else{pel.innerHTML=text; if(onDone)onDone();}
+        else{
+            pel.innerHTML=finalHTML||text;
+            if(finalHTML) box.classList.add('has-links');
+            if(onDone)onDone();
+        }
     }
     tick();
 }
 function clearNarrative(){
     clearTimeout(typewriterTimer);
-    document.getElementById('narrative-text').style.opacity='0';
+    const box=document.getElementById('narrative-text');
+    box.style.opacity='0'; box.classList.remove('has-links'); box.classList.remove('visible');
     document.getElementById('narrative-p').innerHTML='';
     document.getElementById('skip-btn').style.display='none';
 }
@@ -667,7 +800,7 @@ function animateStats(){
             document.getElementById('stat-countries').textContent=nC;
             clearInterval(iv);
         }
-    },1200/60);
+    },600/60);
 }
 function resetStats(){
     statsAnimated=false;
@@ -704,22 +837,24 @@ function addMainLabel(text,x){
 }
 function show(id){document.getElementById(id).style.opacity='1';}
 function hide(id){document.getElementById(id).style.opacity='0';}
+function showLabels(){document.getElementById('axis-labels-container').style.opacity='1';document.getElementById('main-labels-container').style.opacity='1';}
+function hideLabels(){document.getElementById('axis-labels-container').style.opacity='0';document.getElementById('main-labels-container').style.opacity='0';}
 
 /* ════════════════════════════════════════════════════
    SECTION LOGIC — called on EVERY enter (up or down)
 ════════════════════════════════════════════════════ */
 function onSectionEnter(sec){
-    // Reset all overlays
-    hide('hero-text'); hide('stats-display'); clearNarrative();
+    hide('hero-text'); hide('stats-display'); clearNarrative(); hideLabels();
 
     switch(sec){
+        // Step 1 — hero
         case 's0-hero':
             showMap=true; showCountryFills=false; highlightCountries.clear();
-            // Particles stay on map — re-place to ensure correct after scrolling back
             if(p5Instance&&particleMapPos.length) placeParticlesOnMap();
             show('hero-text');
             break;
 
+        // Step 2 — stats counter
         case 's1-stats':
             showMap=true; showCountryFills=false; highlightCountries.clear();
             if(p5Instance&&particleMapPos.length) placeParticlesOnMap();
@@ -727,95 +862,148 @@ function onSectionEnter(sec){
             resetStats(); animateStats();
             break;
 
-        case 's2-narrate1':
+        // Step 3 — "since 2019…"
+        case 's2-narrate':
             showMap=true; showCountryFills=false; highlightCountries.clear();
             if(p5Instance&&particleMapPos.length) placeParticlesOnMap();
-            typewrite('Since 2019, the Eco Jurisprudence Monitor has tracked the emergence of ecocentric law globally.',
+            typewrite('Since 2019, the Eco Jurisprudence Monitor has tracked the emergence of ecocentric law globally. Every dot represents one initiative. Click and explore.',
                 ()=>{document.getElementById('skip-btn').style.display='block';});
             break;
 
-        case 's3-narrate2':
-            showMap=true; showCountryFills=false; highlightCountries.clear();
-            if(p5Instance&&particleMapPos.length) placeParticlesOnMap();
-            typewrite('Every dot represents one initiative. Click and explore.');
-            break;
-
-        case 's4-regions':
+        // Step 4 — regions chart + text
+        case 's3-regions':{
             showMap=true; showCountryFills=true; hoveredCountry=null;
             highlightCountries.clear();
             if(worldGeoJson) worldGeoJson.features.forEach(f=>{
-                if(GEO_TO_REGION[f.properties.name]) highlightCountries.add(f.properties.name);
+                const name=f.properties.name;
+                if(GEO_TO_REGION[name] && (countryCounts[name]||0)>0) highlightCountries.add(name);
             });
-            layoutAllRegions();
+            layoutAllRegions(); showLabels();
+            const total=particles.length||1;
+            const americas=particles.filter(p=>p.data.Region==='North America'||p.data.Region==='Latin America').length;
+            const europe=particles.filter(p=>p.data.Region==='Europe').length;
+            const other=total-americas-europe;
+            const pAm=Math.round(americas/total*100);
+            const pEu=Math.round(europe/total*100);
+            const pOt=Math.round(other/total*100);
+            typewrite(`${pAm}% of initiatives are located in the two Americas, the birth place of the movement. ${pEu}% are in Europe, the remaining ${pOt}% are either international or in other parts of the world.`);
+            break;}
+
+        // Step 5 — region chart lingers, text gone
+        case 's4-regions-linger':
+            showMap=true; showCountryFills=true; hoveredCountry=null;
+            highlightCountries.clear();
+            if(worldGeoJson) worldGeoJson.features.forEach(f=>{
+                const name=f.properties.name;
+                if(GEO_TO_REGION[name] && (countryCounts[name]||0)>0) highlightCountries.add(name);
+            });
+            layoutAllRegions(); showLabels();
             break;
 
+        // Step 6 — year chart + text
         case 's5-year':
             showMap=false; showCountryFills=false; highlightCountries.clear(); hoveredCountry=null;
+            layoutByYear(); showLabels();
+            typewrite(
+                'The commonly agreed-upon starting point of the movement is 2006. Only a few pioneering initiatives pre-date this moment.',
+                null,
+                'The commonly agreed-upon starting point of the movement is 2006. Only a few <a href="https://ecojurisprudence.org/?post_type=ejm_initiative&_ejm_year=1972%2C1978%2C1981%2C1982%2C1988%2C1989%2C1991%2C1996%2C1997%2C1998%2C1999%2C2000%2C2001%2C2002%2C2003%2C2004%2C2005" target="_blank">pioneering initiatives</a> pre-date this moment.'
+            );
+            if(selectedParticle&&!selectedParticle.visible) document.getElementById('pinned-tooltip').style.display='none';
+            break;
+
+        // Step 7 — year chart lingers, text gone
+        case 's6-year-linger':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            layoutByYear(); showLabels();
+            if(selectedParticle&&!selectedParticle.visible) document.getElementById('pinned-tooltip').style.display='none';
+            break;
+
+        // Step 8 — framework chart + text
+        case 's7-framework':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            layoutByFramework(); showLabels();
+            typewrite(
+                'The EJM tracks dozens of data points for each initiative. One of them are the legal provisions that we divide into formal and soft law.',
+                null,
+                'The EJM tracks <a href="https://ecojurisprudence.org/codebook/" target="_blank">dozens of data points</a> for each initiative. One of them are the legal provisions that we divide into formal and soft law.'
+            );
+            break;
+
+        // Step 9 — framework lingers, text gone
+        case 's8-framework-linger':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            layoutByFramework(); showLabels();
+            break;
+
+        // Step 10 — status chart + text
+        case 's9-status':{
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            layoutByStatus(); showLabels();
+            const total=particles.length||1;
+            const approved=particles.filter(p=>(p.data.Status||'').trim().toLowerCase().startsWith('app')).length;
+            const draftedOrSubmitted=particles.filter(p=>{ const s=(p.data.Status||'').trim().toLowerCase(); return s.startsWith('dra')||s.startsWith('sub'); }).length;
+            const pApp=Math.round(approved/total*100);
+            const pDS=Math.round(draftedOrSubmitted/total*100);
+            typewrite(`Ecological jurisprudence is an ongoing global success story. ${pApp}% of all initiatives are approved, ${pDS}% are either drafted or submitted, only a few fail.`);
+            break;}
+
+        // Step 11 — status lingers, text gone
+        case 's10-status-linger':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            layoutByStatus(); showLabels();
+            break;
+
+        // Step 12 — nature chart + text
+        case 's11-nature':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            layoutByNature(); showLabels();
+            typewrite(
+                'Nature in all its shapes and forms is what this research project is all about. We track ecocentric law about ecosystems, animals, rivers, mountains, even the Moon and Antarctica. Let us know if we missed something and reach out to collaborate!',
+                null,
+                'Nature in all its shapes and forms is what this research project is all about. We track ecocentric law about ecosystems, animals, rivers, mountains, even the Moon and Antarctica.<br><br>Let us know if we <a href="https://ecojurisprudence.org/new-initiative/" target="_blank">missed something</a> and <a href="https://ecojurisprudence.org/contact/" target="_blank">reach out</a> to collaborate!'
+            );
+            break;
+
+        // Step 13 — nature lingers, text gone
+        case 's12-nature-linger':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
+            layoutByNature(); showLabels();
+            break;
+
+        // Step 14 — explosion, land on static content
+        case 's13-end':
+            showMap=false; showCountryFills=false; highlightCountries.clear();
             clearLabels();
-            typewrite('The commonly recognized starting point of the modern Rights of Nature movement is 2006. Some initiatives pre-date this moment.');
-            layoutByYear();
-            break;
-
-        case 's6-framework':
-            showMap=false; showCountryFills=false; highlightCountries.clear();
-            clearNarrative();
-            typewrite('This is placeholder text about legal tools.');
-            layoutByFramework();
-            break;
-
-        case 's7-status':
-            showMap=false; showCountryFills=false; highlightCountries.clear();
-            layoutByStatus();
-            break;
-
-        case 's8-nature':
-            showMap=false; showCountryFills=false; highlightCountries.clear();
-            clearNarrative();
-            typewrite('This is placeholder text about nature types.');
-            layoutByNature();
-            break;
-
-        case 's9-end':
-            showMap=false; showCountryFills=false; highlightCountries.clear();
-            clearLabels();
+            document.getElementById('pinned-tooltip').style.display='none';
             particles.forEach(p=>{
                 p.frozen=false;
-                // scatter off screen in random direction
                 const angle=Math.random()*Math.PI*2;
                 const dist=Math.max(window.innerWidth,window.innerHeight)*1.5;
                 p.setTarget(p.x+Math.cos(angle)*dist, p.y+Math.sin(angle)*dist, true);
             });
+            // Scroll to static content after brief delay
+            setTimeout(()=>document.getElementById('static-content').scrollIntoView({behavior:'smooth'}), 600);
             break;
     }
 }
 
 /* ════════════════════════════════════════════════════
-   OBSERVER — scroll-position-based, works both directions
+   OBSERVER — IntersectionObserver, fires at 50% visibility
 ════════════════════════════════════════════════════ */
 function setupObserver(){
-    const sections=[...document.querySelectorAll('.scroll-section')];
-    // Use scroll position to determine which section is "active"
-    // (most centered in viewport). This works perfectly both up and down.
-    function update(){
-        const mid=window.scrollY+window.innerHeight/2;
-        let best=null, bestDist=Infinity;
-        sections.forEach(s=>{
-            const top=s.offsetTop, bot=top+s.offsetHeight;
-            const center=top+s.offsetHeight/2;
-            // section must actually contain the viewport midpoint
-            if(mid>=top && mid<bot){
-                const dist=Math.abs(center-mid);
-                if(dist<bestDist){ bestDist=dist; best=s; }
+    const steps=[...document.querySelectorAll('.scroll-step')];
+    const io=new IntersectionObserver((entries)=>{
+        entries.forEach(entry=>{
+            if(entry.isIntersecting){
+                const sec=entry.target.dataset.section;
+                if(sec!==currentSection){ currentSection=sec; onSectionEnter(sec); }
             }
         });
-        if(best){
-            const sec=best.dataset.section;
-            if(sec!==currentSection){ currentSection=sec; onSectionEnter(sec); }
-        }
-    }
-    window.addEventListener('scroll', update, {passive:true});
-    // Also run once on load
-    setTimeout(update, 100);
+    },{threshold:0.5});
+    steps.forEach(s=>io.observe(s));
+    // Fire once on load
+    setTimeout(()=>{ if(currentSection==='s0-hero') onSectionEnter('s0-hero'); }, 100);
 }
 
 /* ════════════════════════════════════════════════════
@@ -837,7 +1025,7 @@ function layoutAllRegions(){
     REGION_ORDER.forEach((region,i)=>{
         const cx=startX+i*(barW+barSp), rp=regions[region]||[];
         if(!rp.length) return;
-        addAxisLabel(region,cx,{clickable:true,region});
+        addAxisLabel(region,cx+barW/2,{clickable:true,region});
         sortByYear(rp);
         rp.forEach((p,j)=>{ p.frozen=false; p.setTarget(cx+(j%maxCols)*dotSp+3,bY()-Math.floor(j/maxCols)*dotSp,true); });
     });
@@ -853,8 +1041,9 @@ function layoutByYear(){
     let cx=margin;
     yearKeys.forEach(year=>{
         const yp=years[year]||[]; sortByFramework(yp);
-        addAxisLabel(year.toString(),cx);
         const cols=Math.min(8,Math.max(1,Math.floor(barW/8)));
+        const clusterW=cols*8;
+        addAxisLabel(year.toString(), cx + clusterW/2 + 2);
         yp.forEach((p,j)=>{ p.frozen=false; p.setTarget(cx+(j%cols)*8+2,bottom-Math.floor(j/cols)*8,true); });
         cx+=barW+barSp;
     });
@@ -881,7 +1070,7 @@ function layoutByFramework(){
     // track x extents for brackets
     const fStartX=cx;
     fKeys.forEach(cat=>{
-        addAxisLabel(cat.replace('Indigenous Law','Indig. Law').replace('Declaration','Decl.'),cx);
+        addAxisLabel(cat.replace('Indigenous Law','Indig. Law').replace('Declaration','Decl.'),cx+barW/2);
         sortByStatus(fLaw[cat]);
         fLaw[cat].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+2,bottom-Math.floor(j/maxCols)*dotSp,true);});
         cx+=barW+barSp;
@@ -890,7 +1079,7 @@ function layoutByFramework(){
 
     const sStartX=cx;
     sKeys.forEach(cat=>{
-        addAxisLabel(cat.replace('Civil Society Declaration','CS Decl.').replace('Indigenous Declaration','Indig. Decl.').replace('Civil Society Tribunal','CS Tribunal').replace('Private Sector Governance','Priv.').replace('Position Statement','Pos.'),cx);
+        addAxisLabel(cat.replace('Civil Society Declaration','CS Decl.').replace('Indigenous Declaration','Indig. Decl.').replace('Civil Society Tribunal','CS Tribunal').replace('Private Sector Governance','Priv.').replace('Position Statement','Pos.'),cx+barW/2);
         sortByStatus(sLaw[cat]);
         sLaw[cat].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+2,bottom-Math.floor(j/maxCols)*dotSp,true);});
         cx+=barW+barSp;
@@ -941,7 +1130,7 @@ function layoutByStatus(){
     const keys=CANONICAL.filter(c=>st[c].length); if(!keys.length)return;
     const dotSp=8,maxCols=8,barSp=42,barW=maxCols*dotSp,totalW=keys.length*barW+(keys.length-1)*barSp;
     let cx=(w-totalW)/2;
-    keys.forEach(s=>{ sortByNature(st[s]); addAxisLabel(s,cx); st[s].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+3,bottom-Math.floor(j/maxCols)*dotSp,true);}); cx+=barW+barSp; });
+    keys.forEach(s=>{ sortByNature(st[s]); addAxisLabel(s,cx+barW/2); st[s].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+3,bottom-Math.floor(j/maxCols)*dotSp,true);}); cx+=barW+barSp; });
     particles.forEach(p=>{ if(!norm(p.data.Status)){p.frozen=false;p.setTarget(-100,-100,false);} });
 }
 
@@ -953,7 +1142,7 @@ function layoutByNature(){
     const keys=NATURE_ORDER.filter(k=>groups[k].length);
     const dotSp=8,maxCols=8,barSp=42,barW=maxCols*dotSp,totalW=keys.length*barW+(keys.length-1)*barSp;
     let cx=(w-totalW)/2;
-    keys.forEach(g=>{ addAxisLabel(g,cx); groups[g].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+3,bottom-Math.floor(j/maxCols)*dotSp,true);}); cx+=barW+barSp; });
+    keys.forEach(g=>{ addAxisLabel(g,cx+barW/2); groups[g].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+3,bottom-Math.floor(j/maxCols)*dotSp,true);}); cx+=barW+barSp; });
 }
 
 /* ════════════════════════════════════════════════════
@@ -1010,11 +1199,22 @@ document.querySelectorAll('.faq-q').forEach(q=>{
     q.addEventListener('click',()=>{
         const a=q.nextElementSibling;
         const isOpen=a.classList.contains('open');
-        // close all
         document.querySelectorAll('.faq-a.open').forEach(x=>x.classList.remove('open'));
         document.querySelectorAll('.faq-q.open').forEach(x=>x.classList.remove('open'));
         if(!isOpen){ a.classList.add('open'); q.classList.add('open'); }
     });
+});
+
+const expandBtn=document.getElementById('faq-expand-all');
+let allExpanded=false;
+expandBtn.addEventListener('click',()=>{
+    allExpanded=!allExpanded;
+    document.querySelectorAll('.faq-q').forEach(q=>{
+        const a=q.nextElementSibling;
+        if(allExpanded){ q.classList.add('open'); a.classList.add('open'); }
+        else { q.classList.remove('open'); a.classList.remove('open'); }
+    });
+    expandBtn.textContent=allExpanded?'Collapse all':'Expand all';
 });
 </script>
 </body>
