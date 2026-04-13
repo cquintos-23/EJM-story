@@ -45,15 +45,28 @@
     /* narrative */
     #narrative-text {
         position:fixed; left:4vw; top:50%; transform:translateY(-50%);
-        z-index:30; max-width:420px; pointer-events:none;
+        z-index:30; max-width:460px; pointer-events:none;
         opacity:0; transition:opacity 0.55s ease;
+        display:flex; flex-direction:row; align-items:center; gap:6px;
     }
+    #narrative-text.visible { pointer-events:auto; }
     #narrative-text p {
         font-family:'Geist',sans-serif; font-size:18px; font-weight:400;
         color:var(--color-off-black); line-height:1.5;
         background:rgba(255,255,255,0.92); padding:1rem 1.2rem;
         border-radius:8px; backdrop-filter:blur(4px);
+        flex:1;
     }
+    #narrative-text.collapsed p { visibility:hidden; }
+    #narrative-collapse-btn {
+        flex-shrink:0; align-self:center;
+        background:rgba(255,255,255,0.92); border:none; border-radius:6px;
+        font-size:10px; color:#888; padding:6px 5px; cursor:pointer;
+        backdrop-filter:blur(4px); transition:color 0.15s;
+        display:flex; align-items:center; justify-content:center;
+        line-height:1;
+    }
+    #narrative-collapse-btn:hover { color:#3D3D31; }
     .cursor { display:inline-block; width:2px; height:1em; background:#3D3D31;
         margin-left:2px; vertical-align:text-bottom;
         animation:blink 0.7s step-end infinite; }
@@ -61,7 +74,7 @@
 
     /* skip */
     #skip-btn {
-        position:fixed; bottom:36px; right:36px; z-index:50; display:none;
+        position:fixed; bottom:36px; right:36px; z-index:50; display:block;
         box-sizing:border-box; padding:10px 16px; height:40px; width:auto;
         background:var(--color-off-black); border:none; border-radius:8px;
         font-family:'Geist',sans-serif; font-weight:500; font-size:16px; line-height:20px;
@@ -72,9 +85,9 @@
     #skip-btn:hover { opacity:0.85; }
 
     /* chart labels */
-    #axis-labels-container { position:fixed; top:78vh; left:0; width:100%; height:40px; pointer-events:auto; z-index:15; }
-    #main-labels-container  { position:fixed; top:84vh; left:0; width:100%; height:30px; pointer-events:none; z-index:15; }
-    .chart-label { position:absolute; font-family:'Geist Mono',monospace; font-size:7pt; font-weight:500; color:#666; white-space:nowrap; pointer-events:none; }
+    #axis-labels-container { position:fixed; top:78vh; left:0; width:100%; height:64px; pointer-events:auto; z-index:15; }
+    #main-labels-container  { position:fixed; top:88vh; left:0; width:100%; height:30px; pointer-events:none; z-index:15; }
+    .chart-label { position:absolute; font-family:'Geist Mono',monospace; font-size:7pt; font-weight:500; color:#666; white-space:normal; word-break:break-word; max-width:80px; line-height:1.3; pointer-events:none; top:0; }
     .chart-label.main { font-size:10pt; font-weight:600; color:#3D3D31; }
     .chart-label.axis.clickable { pointer-events:auto; cursor:pointer; color:#3D3D31; }
     .chart-label.axis.clickable:hover { text-decoration:underline; }
@@ -122,6 +135,23 @@
         white-space:nowrap;
     }
     #zoom-hint.visible { opacity:1; }
+
+    /* zoom controls */
+    #zoom-controls {
+        position:fixed; bottom:88px; right:36px; z-index:50;
+        display:none; flex-direction:column; gap:6px;
+        pointer-events:auto;
+    }
+    #zoom-controls.visible { display:flex; }
+    #zoom-in-btn, #zoom-out-btn {
+        width:36px; height:36px;
+        background:var(--color-off-black); border:none; border-radius:8px;
+        font-family:'Geist',sans-serif; font-size:20px; line-height:1;
+        color:var(--color-white); cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+        transition:opacity 0.2s; pointer-events:auto;
+    }
+    #zoom-in-btn:hover, #zoom-out-btn:hover { opacity:0.8; }
 
     /* progress */
     #progress-bar-track { position:fixed; bottom:0; left:0; width:100%; height:7px; background:rgba(61,61,49,.1); z-index:100; pointer-events:none; }
@@ -253,9 +283,13 @@
 <div id="fixed-overlays">
     <div id="stats-display"><span id="stat-initiatives">0</span> Initiatives<span class="sep">·</span><span id="stat-countries">0</span> Countries<span class="sep">·</span>1 Movement</div>
 </div>
-<div id="narrative-text"><p id="narrative-p"></p></div>
+<div id="narrative-text"><button id="narrative-collapse-btn">◀</button><p id="narrative-p"></p></div>
 <button id="skip-btn">skip →</button>
-<div id="zoom-hint">scroll to zoom · drag to pan</div>
+<div id="zoom-hint">+ / − to zoom · drag to pan</div>
+<div id="zoom-controls">
+    <button id="zoom-in-btn" title="Zoom in">+</button>
+    <button id="zoom-out-btn" title="Zoom out">−</button>
+</div>
 <div id="country-name-display"></div>
 
 <!-- Tooltips -->
@@ -359,15 +393,16 @@ let currentSection='s0-hero';
 let p5Instance, worldGeoJson=null, mapProjection=null;
 let selectedParticle=null;
 let showMap=true;
-let showCountryFills=true;   // false once we leave regions
+let showCountryFills=true;
 let highlightCountries=new Set();
 let typewriterTimer=null;
 let statsAnimated=false;
 let particleMapPos=[];
-let hoveredCountry=null;   // GeoJSON feature currently under mouse
-let selectedCountry=null;  // country whose initiatives stay highlighted
-let selectedCountryParticles=new Set(); // particles belonging to selected country
-let countryCounts={};      // country name → initiative count, built after data loads
+let hoveredCountry=null;
+let selectedCountry=null;
+let selectedCountryParticles=new Set();
+let countryCounts={};
+let narrativeVisible=false;  // true when narrative box is faded in
 
 /* ── MAP ZOOM (active in s2-narrate1 / s3-narrate2) ── */
 let mapZoom={ k:1, tx:0, ty:0 };
@@ -659,6 +694,9 @@ function initViz(){
             const ttEl=document.getElementById('tooltip');
             const ctEl=document.getElementById('country-tooltip');
             if(selectedParticle){ttEl.style.display='none'; ctEl.style.display='none'; hoveredCountry=null; return;}
+            // Block hover tooltips when narrative is visible and not collapsed
+            const narrativeCollapsed=document.getElementById('narrative-text').classList.contains('collapsed');
+            if(narrativeVisible&&!narrativeCollapsed){ttEl.style.display='none'; ctEl.style.display='none'; hoveredCountry=null; return;}
             const found=findParticle(p.mouseX,p.mouseY);
             if(found){
                 document.getElementById('tt-title').textContent=found.title;
@@ -666,7 +704,9 @@ function initViz(){
                 document.getElementById('tt-link').innerHTML=found.permalink?`<a href="${found.permalink}" target="_blank">more info ↗</a>`:'';
                 ttEl.style.setProperty('--tt-accent', found.color);
                 ttEl.style.display='block';
-                ttEl.style.left=(p.mouseX+14)+'px'; ttEl.style.top=(p.mouseY-8)+'px';
+                // Position above the dot; after rendering measure height for offset
+                ttEl.style.left=(p.mouseX-ttEl.offsetWidth/2)+'px';
+                ttEl.style.top=(p.mouseY-ttEl.offsetHeight-16)+'px';
                 p.canvas.style.cursor=mapZoomActive?'grab':'pointer';
                 ctEl.style.display='none'; hoveredCountry=null;
             } else {
@@ -690,7 +730,8 @@ function initViz(){
                             hoveredCountry=hit.properties.name;
                             ctEl.textContent=`${resolvedHover}: ${n} initiative${n!==1?'s':''}`;
                             ctEl.style.display='block';
-                            ctEl.style.left=(p.mouseX+14)+'px'; ctEl.style.top=(p.mouseY-8)+'px';
+                            ctEl.style.left=(p.mouseX-ctEl.offsetWidth/2)+'px';
+                            ctEl.style.top=(p.mouseY-ctEl.offsetHeight-16)+'px';
                             p.canvas.style.cursor=mapZoomActive?'grab':'pointer';
                         } else {
                             hoveredCountry=null; ctEl.style.display='none';
@@ -748,6 +789,12 @@ function initViz(){
     setupObserver();
     document.getElementById('skip-btn').addEventListener('click',()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}));
     document.getElementById('pt-close').addEventListener('click',hidePinned);
+    document.getElementById('narrative-collapse-btn').addEventListener('click',()=>{
+        const box=document.getElementById('narrative-text');
+        const btn=document.getElementById('narrative-collapse-btn');
+        const collapsed=box.classList.toggle('collapsed');
+        btn.textContent=collapsed?'▶':'◀';
+    });
     window.addEventListener('scroll',()=>{
         if(selectedParticle) positionPinnedTooltip();
         const pct=window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100;
@@ -764,22 +811,21 @@ function initViz(){
     /* ── MAP ZOOM INTERACTIONS (wheel + drag + pinch) ── */
     const canvas=document.querySelector('#p5-canvas canvas')||document.getElementById('p5-canvas');
 
-    // Wheel zoom — zoom toward cursor
-    canvas.addEventListener('wheel',(e)=>{
+    // Scroll zoom DISABLED — use +/- buttons instead
+
+    // +/- button zoom — zoom toward canvas center
+    function doButtonZoom(factor){
         if(!mapZoomActive) return;
-        e.preventDefault();
-        const rect=canvas.getBoundingClientRect();
-        const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-        const delta=-e.deltaY*(e.deltaMode===1?20:1);
-        const factor=Math.pow(1.001,delta);
+        const cx=window.innerWidth/2, cy=window.innerHeight/2;
         const k0=mapZoom.k;
         mapZoom.k=Math.max(MAP_ZOOM_MIN,Math.min(MAP_ZOOM_MAX,k0*factor));
-        // Adjust translate so zoom centres on cursor
-        mapZoom.tx=mx-(mx-mapZoom.tx)*(mapZoom.k/k0);
-        mapZoom.ty=my-(my-mapZoom.ty)*(mapZoom.k/k0);
+        mapZoom.tx=cx-(cx-mapZoom.tx)*(mapZoom.k/k0);
+        mapZoom.ty=cy-(cy-mapZoom.ty)*(mapZoom.k/k0);
         clampZoom();
         applyZoomToParticles();
-    },{passive:false});
+    }
+    document.getElementById('zoom-in-btn').addEventListener('click',()=>doButtonZoom(1.5));
+    document.getElementById('zoom-out-btn').addEventListener('click',()=>doButtonZoom(1/1.5));
 
     // Mouse drag
     canvas.addEventListener('mousedown',(e)=>{
@@ -937,10 +983,12 @@ function positionPinnedTooltip(){
     // Hide tooltip if particle is not visible (e.g. pre-2006 in year chart)
     if(!selectedParticle.visible){ el.style.display='none'; return; }
     el.style.display='block';
-    let left=selectedParticle.x+14, top=selectedParticle.y-40;
-    if(left+220>window.innerWidth-10) left=selectedParticle.x-234;
-    if(top<10) top=10;
-    if(top+90>window.innerHeight-10) top=window.innerHeight-100;
+    const elH=el.offsetHeight||100, elW=el.offsetWidth||220;
+    let left=selectedParticle.x-elW/2;
+    let top=selectedParticle.y-elH-16;
+    if(left<10) left=10;
+    if(left+elW>window.innerWidth-10) left=window.innerWidth-elW-10;
+    if(top<10) top=selectedParticle.y+16; // flip below if no room above
     el.style.left=left+'px'; el.style.top=top+'px';
 }
 function showPinned(p){
@@ -966,7 +1014,12 @@ function typewrite(text, onDone){
     clearTimeout(typewriterTimer);
     const pel=document.getElementById('narrative-p');
     const box=document.getElementById('narrative-text');
-    box.style.opacity='1'; pel.innerHTML=''; let i=0;
+    box.classList.remove('collapsed');
+    document.getElementById('narrative-collapse-btn').textContent='◀';
+    box.style.opacity='1';
+    box.classList.add('visible');
+    narrativeVisible=true;
+    pel.innerHTML=''; let i=0;
     function tick(){
         pel.innerHTML=text.slice(0,i)+'<span class="cursor"></span>';
         if(i<text.length){i++; typewriterTimer=setTimeout(tick,17);}
@@ -976,9 +1029,12 @@ function typewrite(text, onDone){
 }
 function clearNarrative(){
     clearTimeout(typewriterTimer);
-    document.getElementById('narrative-text').style.opacity='0';
+    const box=document.getElementById('narrative-text');
+    box.style.opacity='0';
+    box.classList.remove('visible','collapsed');
     document.getElementById('narrative-p').innerHTML='';
-    document.getElementById('skip-btn').style.display='none';
+    narrativeVisible=false;
+    // skip-btn stays visible — do not hide it here
 }
 
 /* ════════════════════════════════════════════════════
@@ -1016,7 +1072,27 @@ function clearLabels(){
 function addAxisLabel(text,x,opts={}){
     const el=document.createElement('div');
     el.className='chart-label axis'+(opts.clickable?' clickable':'');
-    el.textContent=text; el.style.left=x+'px';
+    // Wrap into up to 3 lines if label > 9 chars
+    if(text.length>9){
+        const words=text.split(' ');
+        let html='';
+        if(words.length<=2){
+            // 2 words → just split them
+            html=words.join('<br>');
+        } else {
+            // 3+ words → distribute as evenly as possible across up to 3 lines
+            const targetLines=Math.min(3,words.length);
+            const perLine=Math.ceil(words.length/targetLines);
+            const lines=[];
+            for(let i=0;i<words.length;i+=perLine) lines.push(words.slice(i,i+perLine).join(' '));
+            html=lines.join('<br>');
+        }
+        el.innerHTML=html;
+    } else {
+        el.textContent=text;
+    }
+    el.style.left=x+'px';
+    el.style.top='0';
     if(opts.clickable){
         el.addEventListener('click',()=>window.open(REGION_URLS[opts.region],'_blank'));
         const count=particles.filter(p=>p.data.Region===opts.region).length;
@@ -1045,6 +1121,7 @@ function onSectionEnter(sec){
     if(mapZoomActive){ mapZoomActive=false; resetMapZoom(); if(p5Instance&&particleMapPos.length) placeParticlesOnMap(); }
     // selectedCountry persists through all sections until user explicitly clicks out
     document.getElementById('zoom-hint').classList.remove('visible');
+    document.getElementById('zoom-controls').classList.remove('visible');
 
     switch(sec){
         case 's0-hero':
@@ -1064,6 +1141,7 @@ function onSectionEnter(sec){
             showMap=true; showCountryFills=false; highlightCountries.clear();
             mapZoomActive=true;
             document.getElementById('zoom-hint').classList.add('visible');
+            document.getElementById('zoom-controls').classList.add('visible');
             if(p5Instance&&particleMapPos.length) applyZoomToParticles();
             typewrite('Since 2019, the Eco Jurisprudence Monitor has tracked the emergence of ecocentric law. Every dot represents one initiative. Click and explore.',
                 ()=>{document.getElementById('skip-btn').style.display='block';});
@@ -1078,6 +1156,7 @@ function onSectionEnter(sec){
             });
             mapZoomActive=true;
             document.getElementById('zoom-hint').classList.add('visible');
+            document.getElementById('zoom-controls').classList.add('visible');
             if(p5Instance&&particleMapPos.length) applyZoomToParticles();
             typewrite('Since 2019, the Eco Jurisprudence Monitor has tracked the emergence of ecocentric law. Every dot represents one initiative. Click and explore.');
             break;
@@ -1132,6 +1211,7 @@ function onSectionEnter(sec){
         case 's9-end':
             showMap=false; showCountryFills=false; highlightCountries.clear();
             clearLabels();
+            document.getElementById('skip-btn').style.display='none';
             particles.forEach(p=>{
                 p.frozen=false;
                 const angle=Math.random()*Math.PI*2;
@@ -1239,7 +1319,7 @@ function layoutByFramework(){
     // track x extents for brackets
     const fStartX=cx;
     fKeys.forEach(cat=>{
-        addAxisLabel(cat.replace('Indigenous Law','Indig. Law').replace('Declaration','Decl.'),cx);
+        addAxisLabel(cat,cx);
         sortByStatus(fLaw[cat]);
         fLaw[cat].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+2,bottom-Math.floor(j/maxCols)*dotSp,true);});
         cx+=barW+barSp;
@@ -1248,7 +1328,7 @@ function layoutByFramework(){
 
     const sStartX=cx;
     sKeys.forEach(cat=>{
-        addAxisLabel(cat.replace('Civil Society Declaration','CS Decl.').replace('Indigenous Declaration','Indig. Decl.').replace('Civil Society Tribunal','CS Tribunal').replace('Private Sector Governance','Priv.').replace('Position Statement','Pos.'),cx);
+        addAxisLabel(cat,cx);
         sortByStatus(sLaw[cat]);
         sLaw[cat].forEach((p,j)=>{p.frozen=false;p.setTarget(cx+(j%maxCols)*dotSp+2,bottom-Math.floor(j/maxCols)*dotSp,true);});
         cx+=barW+barSp;
@@ -1269,9 +1349,8 @@ let frameworkBrackets=[];
 
 function drawFrameworkBrackets(p){
     if(!frameworkBrackets.length) return;
-    // axis-labels-container sits at top:78vh, main-labels at top:84vh
-    // bracket bar sits between them: at ~81vh in canvas coords
-    const bracketY=p.height*0.815;
+    // axis-labels-container sits at top:78vh (up to 3 lines tall ~40px), bracket sits below at ~88vh
+    const bracketY=p.height*0.865;
     const bracketH=3;
     const labelColor=p5Instance.color('#999');
     frameworkBrackets.forEach(b=>{
