@@ -127,7 +127,7 @@
 
     /* zoom hint */
     #zoom-hint {
-        position:fixed; bottom:52px; left:50%; transform:translateX(-50%);
+        position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
         z-index:50; font-family:'Geist',sans-serif; font-size:0.75rem;
         color:#3D3D31; background:rgba(255,255,255,0.88); backdrop-filter:blur(4px);
         padding:0.35rem 0.9rem; border-radius:999px; border:1px solid rgba(61,61,49,0.2);
@@ -138,141 +138,37 @@
 
     /* zoom controls */
     #zoom-controls {
-        position:fixed; bottom:88px; right:36px; z-index:50;
-        display:none; flex-direction:column; gap:6px;
+        position:fixed; bottom:68px; left:50%; transform:translateX(-50%);
+        z-index:50; display:none; flex-direction:row; align-items:center; gap:8px;
         pointer-events:auto;
     }
     #zoom-controls.visible { display:flex; }
-    #zoom-in-btn, #zoom-out-btn {
-        width:36px; height:36px;
-        background:var(--color-off-black); border:none; border-radius:8px;
-        font-family:'Geist',sans-serif; font-size:20px; line-height:1;
-        color:var(--color-white); cursor:pointer;
-        display:flex; align-items:center; justify-content:center;
-        transition:opacity 0.2s; pointer-events:auto;
+    .zoom-slider-label {
+        font-family:'Geist',sans-serif; font-size:11px; color:var(--color-off-black);
+        opacity:0.55; user-select:none; line-height:1;
     }
-    #zoom-in-btn:hover, #zoom-out-btn:hover { opacity:0.8; }
+    #zoom-slider {
+        -webkit-appearance:none; appearance:none;
+        width:120px; height:4px;
+        background:rgba(61,61,49,0.15); border-radius:999px;
+        outline:none; cursor:pointer; pointer-events:auto;
+    }
+    #zoom-slider::-webkit-slider-thumb {
+        -webkit-appearance:none; appearance:none;
+        width:14px; height:14px; border-radius:50%;
+        background:var(--color-off-black); cursor:pointer;
+        border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.25);
+    }
+    #zoom-slider::-moz-range-thumb {
+        width:14px; height:14px; border-radius:50%;
+        background:var(--color-off-black); cursor:pointer;
+        border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.25);
+    }
 
     /* progress */
     #progress-bar-track { position:fixed; bottom:0; left:0; width:100%; height:7px; background:rgba(61,61,49,.1); z-index:100; pointer-events:none; }
     #progress-bar-fill  { height:100%; width:0%; background:#4F6F89; transition:width .1s linear; }
 
-    /* ═══════════════════════════════════
-       STATIC CONTENT (below scrollytelling)
-    ═══════════════════════════════════ */
-    #static-content {
-        position:relative; z-index:5;
-        background:#fff;
-        padding:80px 5vw 120px;
-    }
-
-    /* end buttons */
-    #end-buttons {
-        display:flex; flex-direction:column; align-items:center; gap:16px;
-        margin-bottom:80px;
-    }
-    .end-btn {
-        display:inline-block; box-sizing:border-box; padding:10px 16px;
-        height:40px; width:auto;
-        background:var(--color-off-black); border:none; border-radius:8px;
-        font-family:'Geist',sans-serif; font-weight:500; font-size:16px; line-height:20px;
-        color:var(--color-white); text-decoration:none; white-space:nowrap;
-        cursor:pointer; box-shadow:none; text-transform:none;
-        transition:opacity .2s;
-    }
-    .end-btn:hover { opacity:0.85; }
-
-    /* expanding panels carousel */
-    #initiative-carousel {
-        display:flex; gap:6px; margin-bottom:80px;
-        height:380px; overflow:hidden; border-radius:12px;
-    }
-    .init-panel {
-        flex:1 1 0;           /* all panels share space equally when collapsed */
-        min-width:0;
-        border-radius:10px;
-        overflow:hidden; cursor:pointer;
-        transition:flex-grow 0.45s cubic-bezier(0.4,0,0.2,1);
-        position:relative;
-    }
-    /* the image fills the whole panel as the background slice */
-    .init-panel-bg {
-        position:absolute; inset:0;
-        background-size:cover; background-position:center;
-        transition:filter 0.3s;
-        filter:brightness(0.82);
-    }
-    .init-panel:hover .init-panel-bg { filter:brightness(1); }
-    /* dark gradient at bottom for legibility when expanded */
-    .init-panel-bg::after {
-        content:''; position:absolute; inset:0;
-        background:linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%);
-        opacity:0; transition:opacity 0.3s;
-    }
-    .init-panel:hover .init-panel-bg::after { opacity:1; }
-    /* hover expands this panel to ~3× its share */
-    .init-panel:hover { flex-grow:4; }
-    /* expanded card content (overlaid on image) */
-    .init-panel-content {
-        position:absolute; bottom:0; left:0; right:0;
-        padding:16px 16px 18px;
-        opacity:0; transition:opacity 0.2s 0.42s;
-    }
-    .init-panel:hover .init-panel-content { opacity:1; transition:opacity 0.2s 0.42s; }
-    .init-panel:not(:hover) .init-panel-content { opacity:0; transition:opacity 0s; }
-    .init-card-title { font-family:'Geist',sans-serif; font-size:0.88rem; font-weight:600; color:#fff; margin-bottom:5px; line-height:1.35; }
-    .init-card-meta  { font-family:'Geist Mono',monospace; font-size:7pt; color:rgba(255,255,255,0.75); line-height:1.6; }
-    .init-card-link  { display:inline-block; margin-top:8px; font-family:'Geist',sans-serif; font-size:7.5pt; font-weight:600; color:#8ECBF0; text-decoration:none; }
-    .init-card-link:hover { text-decoration:underline; }
-
-    /* accordion wrapper */
-    #faq-wrapper {
-        display:flex; justify-content:center;
-    }
-    #faq-section {
-        width:100%; max-width:760px;
-        padding:8px 0 24px;
-    }
-    #faq-header {
-        display:flex; align-items:baseline; justify-content:space-between;
-        margin-bottom:28px;
-    }
-    #faq-title {
-        font-family:'Geist',sans-serif; font-size:1.6rem;
-        font-weight:700; color:#3D3D31;
-    }
-    #faq-expand-all {
-        background-color:transparent; box-sizing:border-box;
-        padding:10px 16px; height:40px; width:auto;
-        border:1px solid var(--color-sand); border-radius:8px;
-        font-family:'Geist',sans-serif; font-weight:500; font-size:16px; line-height:20px;
-        color:var(--color-dark-sand); text-decoration:none; white-space:nowrap;
-        cursor:pointer; box-shadow:none; text-transform:none;
-        transition:border-color 0.2s, color 0.2s;
-    }
-    #faq-expand-all:hover { border-color:var(--color-off-black); color:var(--color-off-black); }
-    .faq-q {
-        font-family:'Geist',sans-serif; font-size:34px; font-weight:600;
-        line-height:42px; letter-spacing:-0.01em;
-        color:var(--color-off-black); cursor:pointer;
-        padding:24px 48px 24px 0; border-top:1px solid #D1D1BF;
-        position:relative; user-select:none;
-    }
-    .faq-q:first-child { border-top:none; }
-    .faq-q::after {
-        content:'＋'; position:absolute; right:0; top:50%;
-        transform:translateY(-50%); font-size:1.2rem; font-weight:400;
-        transition:transform .25s;
-    }
-    .faq-q.open::after { content:'−'; }
-    .faq-a {
-        font-family:'Geist',sans-serif; font-size:18px; font-weight:400;
-        color:var(--color-off-black); line-height:1.5;
-        max-height:0; overflow:hidden; transition:max-height .35s ease, padding .25s;
-        padding:0;
-    }
-    .faq-a.open { max-height:1200px; padding-bottom:24px; }
-    .faq-a p+p { margin-top:12px; }
     </style>
 </head>
 <body>
@@ -285,10 +181,11 @@
 </div>
 <div id="narrative-text"><button id="narrative-collapse-btn">◀</button><p id="narrative-p"></p></div>
 <button id="skip-btn">skip →</button>
-<div id="zoom-hint">+ / − to zoom · drag to pan</div>
+<div id="zoom-hint">slider to zoom · drag to pan</div>
 <div id="zoom-controls">
-    <button id="zoom-in-btn" title="Zoom in">+</button>
-    <button id="zoom-out-btn" title="Zoom out">−</button>
+    <span class="zoom-slider-label">−</span>
+    <input id="zoom-slider" type="range" min="1" max="12" step="0.01" value="1">
+    <span class="zoom-slider-label">+</span>
 </div>
 <div id="country-name-display"></div>
 
@@ -323,66 +220,6 @@
     <div class="scroll-section" data-section="s9-end"></div>
 </div>
 
-<!-- ═══ STATIC CONTENT ═══ -->
-<div id="static-content">
-
-    <!-- End buttons -->
-    <div id="end-buttons">
-        <a class="end-btn" href="#">Map Builder</a>
-        <a class="end-btn" href="#">Initiative Index</a>
-    </div>
-
-    <!-- Initiative carousel -->
-    <div id="initiative-carousel">
-        <!-- Cards injected by JS once data loads -->
-    </div>
-
-    <!-- FAQ accordion -->
-    <div id="faq-wrapper">
-    <div id="faq-section">
-
-        <div id="faq-header">
-            <span id="faq-title">Frequently Asked Questions</span>
-            <button id="faq-expand-all">Expand all</button>
-        </div>
-
-        <div class="faq-q">How many rights of nature are there?</div>
-        <div class="faq-a"><p>As of 2026, we have tracked 683 eco jurisprudence initiatives in 63 countries and territories. 512 of them are rights of nature. Yes, there is a difference. Check out our <a href="https://ecojurisprudence.org/?post_type=ejm_initiative" target="_blank">initiative index</a> to explore the beautiful diversity of the movement.</p></div>
-
-        <div class="faq-q">Wait, there is more than the rights of nature?</div>
-        <div class="faq-a"><p>We track all kinds of ecocentric law around the world. Next to the rights of nature, we monitor eco-governance systems, indigenous models, personhood, animal rights, and local eco knowledge. Our <a href="https://ecojurisprudence.org/codebook/" target="_blank">codebook</a> has all the definitions you need.</p></div>
-
-        <div class="faq-q">What else do you track?</div>
-        <div class="faq-a"><p>For every initiative, we try to gather as much information as possible: who, what, when, where, how, why? That means a lot of boring and many more exciting rabbit holes. Have you ever heard about the <a href="https://ecojurisprudence.org/initiatives/west-papau-green-state-vision/" target="_blank">disputed Indonesian province of West Papua</a>? Well, now you did.</p></div>
-
-        <div class="faq-q">You do have some mistakes on the website!</div>
-        <div class="faq-a"><p>We are doing our very best to be the most reliable database on global ecocentric law. We are also humans and make mistakes. If you find one or more, please <a href="https://ecojurisprudence.org/contact/" target="_blank">let us know</a> and we will fix them as quick as we can. An initiative is missing? Please <a href="https://ecojurisprudence.org/new-initiative/" target="_blank">tell us that too</a>. We rely on our community. Thank you!</p></div>
-
-        <div class="faq-q">Can I use your data?</div>
-        <div class="faq-a"><p>Yes, please do. All of our data is under a <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.en" target="_blank">CC BY-SA 4.0 license</a> and follows additional <a href="https://ecojurisprudence.org/data-ethics/" target="_blank">data ethics</a>. That means you can use and adapt it for all the projects you want, even commercially. We only ask you to cite us properly and to continue the spirit of open knowledge. <a href="https://ecojurisprudence.org/contact/" target="_blank">Let us know</a> about what you do. We are always excited to hear about, collaborate on, promote, or support your project in any way we can.</p></div>
-
-        <div class="faq-q">Who pays for all of this?</div>
-        <div class="faq-a"><p>We wouldn't be here without generous grants from the <a href="https://www.rbf.org/" target="_blank">Rockefeller Brothers Fund</a>, <a href="https://environmentnow.org/" target="_blank">Environment Now</a>, and countless hours of <a href="https://ecojurisprudence.org/about-2/" target="_blank">a small group</a> of priceless academics, dedicated volunteers, topical and regional experts, motivated interns, and a luckily growing EJM community. You can also support us directly by <a href="https://ecomm.uoregon.edu/select/5501898/1773290563" target="_blank">donation</a>.</p></div>
-
-        <div class="faq-q">I want some names!</div>
-        <div class="faq-a"><p><a href="https://cas.uoregon.edu/directory/political-science/all/ckauffma" target="_blank">Craig</a> is the Principal Investigator and Executive Director of this project. <a href="https://www.linkedin.com/in/cat-haas/" target="_blank">Cat</a> is the managing director and only full-time employee of this research project. We are supported by many more people that you can find on our <a href="https://ecojurisprudence.org/about-2/" target="_blank">About page</a>.</p></div>
-
-        <div class="faq-q">Why are you doing this?</div>
-        <div class="faq-a"><p>Because ecocentric law is inspiring! In fact, it is so inspiring that we want people to know all about it. We believe in rigorous research and superb science communication. We also believe that facts should inform opinions, not the other way around.</p></div>
-
-        <div class="faq-q">Speaking of science communication, your website is pretty nice! Who made it?</div>
-        <div class="faq-a"><p>You are seeing the result of years of work, of frustration, and steep learning curves. You would not believe how difficult it is to make something look easy. We had amazing people doing amazing things and are very proud of how it turned out. Special thanks to our website 2.0 designer <a href="https://www.louischarron.io/" target="_blank">Louis</a> and our data-viz-ard <a href="https://www.carmenquintos.com/" target="_blank">Carmen</a>.</p></div>
-
-        <div class="faq-q">But you still use a Eurocentric world map? Ugh.</div>
-        <div class="faq-a"><p>While designing the page, we thought about using many different projections that would reflect our core values: Dymaxion, South-up, Waterman Butterfly… you name them. Ask our cartographer-in-chief <a href="https://www.linkedin.com/in/alex-putzer/" target="_blank">Alex</a> about it. For all of our design choices, we were looking for the ideal combination between innovation and feasibility. Eventually, it always all boils down to <a href="https://www.w3.org/WAI/standards-guidelines/wcag/" target="_blank">accessibility</a> in its many shapes and forms. Hey, at least it's not Mercator.</p></div>
-
-        <div class="faq-q">Ok, this all sounds very cool. Can I work for you?</div>
-        <div class="faq-a"><p>Of course you can! We are always looking for new people that can help to make this project better. We don't really have the funds to pay you, but we are more than happy to support you in finding some. <a href="https://ecojurisprudence.org/contact/" target="_blank">When in doubt, reach out!</a></p></div>
-
-    </div><!-- /faq-section -->
-    </div><!-- /faq-wrapper -->
-
-</div><!-- /static-content -->
 
 <script>
 /* ════════════════════════════════════════════════════
@@ -604,7 +441,6 @@ Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vSKgeCFRWhEydDOm3JMj
         // Store rawCounts for now; resolveCountryCounts() will run after GeoJSON loads
         window._rawCountryCounts=rawCounts;
         initViz();
-        buildCarousel();
     },
     error(){ console.error('Data load failed'); }
 });
@@ -811,21 +647,21 @@ function initViz(){
     /* ── MAP ZOOM INTERACTIONS (wheel + drag + pinch) ── */
     const canvas=document.querySelector('#p5-canvas canvas')||document.getElementById('p5-canvas');
 
-    // Scroll zoom DISABLED — use +/- buttons instead
-
-    // +/- button zoom — zoom toward canvas center
-    function doButtonZoom(factor){
+    // Slider zoom
+    const zoomSlider = document.getElementById('zoom-slider');
+    zoomSlider.addEventListener('input', () => {
         if(!mapZoomActive) return;
-        const cx=window.innerWidth/2, cy=window.innerHeight/2;
-        const k0=mapZoom.k;
-        mapZoom.k=Math.max(MAP_ZOOM_MIN,Math.min(MAP_ZOOM_MAX,k0*factor));
-        mapZoom.tx=cx-(cx-mapZoom.tx)*(mapZoom.k/k0);
-        mapZoom.ty=cy-(cy-mapZoom.ty)*(mapZoom.k/k0);
+        const cx = window.innerWidth/2, cy = window.innerHeight/2;
+        const k0 = mapZoom.k;
+        mapZoom.k = parseFloat(zoomSlider.value);
+        mapZoom.tx = cx - (cx - mapZoom.tx) * (mapZoom.k / k0);
+        mapZoom.ty = cy - (cy - mapZoom.ty) * (mapZoom.k / k0);
         clampZoom();
         applyZoomToParticles();
-    }
-    document.getElementById('zoom-in-btn').addEventListener('click',()=>doButtonZoom(1.5));
-    document.getElementById('zoom-out-btn').addEventListener('click',()=>doButtonZoom(1/1.5));
+    });
+
+    // Sync slider when zoom changes via drag/pinch
+    function syncSlider(){ zoomSlider.value = mapZoom.k; }
 
     // Mouse drag
     canvas.addEventListener('mousedown',(e)=>{
@@ -839,6 +675,7 @@ function initViz(){
         mapZoom.ty=_drag.ty+(e.clientY-_drag.y);
         clampZoom();
         applyZoomToParticles();
+        syncSlider();
     });
     window.addEventListener('mouseup',()=>{
         if(_drag.down){ _drag.down=false; canvas.style.cursor=mapZoomActive?'grab':'default'; }
@@ -872,6 +709,7 @@ function initViz(){
             mapZoom.ty=_pinch.my-(_pinch.my-_pinch.ty0)*(mapZoom.k/k0);
             clampZoom();
             applyZoomToParticles();
+            syncSlider();
         } else if(_drag.down&&e.touches.length===1){
             mapZoom.tx=_drag.tx+(e.touches[0].clientX-_drag.x);
             mapZoom.ty=_drag.ty+(e.touches[0].clientY-_drag.y);
@@ -956,6 +794,7 @@ function resetMapZoom(){
     mapZoom={k:1,tx:0,ty:0};
     _drag={down:false,x:0,y:0,tx:0,ty:0};
     _pinch={active:false,dist:0,k0:1,tx0:0,ty0:0};
+    const s=document.getElementById('zoom-slider'); if(s) s.value=1;
 }
 
 function clampZoom(){
@@ -1415,59 +1254,6 @@ function getNatureCat(t){
     if(l.includes('mountain')||l.includes('grass')||l.includes('desert'))return'Mountain + Grassland + Desert';
     return'Multiple';
 }
-
-/* ════════════════════════════════════════════════════
-   CAROUSEL (static content, built once data loads)
-════════════════════════════════════════════════════ */
-function buildCarousel(){
-    const container=document.getElementById('initiative-carousel');
-    const sample=data.filter(r=>r.Title&&r['Cover Image']).slice(0,10);
-    // If fewer than 10 have cover images, pad with any that have titles
-    const extra=data.filter(r=>r.Title&&!r['Cover Image']);
-    while(sample.length<10&&extra.length) sample.push(extra.shift());
-    container.innerHTML=sample.slice(0,10).map(d=>{
-        const img=(d['Cover Image']||'').trim();
-        const bgStyle=img?`background-image:url('${img}')`:`background:#C8C8B8`;
-        return `
-        <div class="init-panel">
-            <div class="init-panel-bg" style="${bgStyle}"></div>
-            <div class="init-panel-content">
-                <div class="init-card-title">${d.Title||'Unknown Initiative'}</div>
-                <div class="init-card-meta">
-                    ${d['Primary Year']||'—'} &nbsp;·&nbsp;
-                    ${(d.Status||'—').trim()} &nbsp;·&nbsp;
-                    ${d.Region||'—'}
-                </div>
-                ${d.Permalink?`<a class="init-card-link" href="${d.Permalink}" target="_blank">View initiative ↗</a>`:''}
-            </div>
-        </div>`;
-    }).join('');
-}
-
-/* ════════════════════════════════════════════════════
-   FAQ ACCORDION
-════════════════════════════════════════════════════ */
-document.querySelectorAll('.faq-q').forEach(q=>{
-    q.addEventListener('click',()=>{
-        const a=q.nextElementSibling;
-        const isOpen=a.classList.contains('open');
-        document.querySelectorAll('.faq-a.open').forEach(x=>x.classList.remove('open'));
-        document.querySelectorAll('.faq-q.open').forEach(x=>x.classList.remove('open'));
-        if(!isOpen){ a.classList.add('open'); q.classList.add('open'); }
-    });
-});
-
-const expandBtn=document.getElementById('faq-expand-all');
-let allExpanded=false;
-expandBtn.addEventListener('click',()=>{
-    allExpanded=!allExpanded;
-    document.querySelectorAll('.faq-q').forEach(q=>{
-        const a=q.nextElementSibling;
-        if(allExpanded){ q.classList.add('open'); a.classList.add('open'); }
-        else { q.classList.remove('open'); a.classList.remove('open'); }
-    });
-    expandBtn.textContent=allExpanded?'Collapse all':'Expand all';
-});
 </script>
 </body>
 </html>
