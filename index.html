@@ -25,7 +25,8 @@
     .scroll-section { height:200vh; width:100%; pointer-events:none; }
 
     /* ── FIXED CANVAS ── */
-    #p5-canvas { position:fixed; top:0; left:0; width:100%; height:100vh; z-index:1; cursor:default; will-change:transform; }
+    #p5-canvas { position:fixed; top:0; left:0; width:100%; height:100vh; z-index:1; cursor:default; will-change:transform; touch-action:none; }
+    #p5-canvas canvas { touch-action:none; }
 
     /* ── FIXED OVERLAYS ── */
     #fixed-overlays {
@@ -47,26 +48,57 @@
         position:fixed; left:4vw; top:50%; transform:translateY(-50%);
         z-index:30; max-width:460px; pointer-events:none;
         opacity:0; transition:opacity 0.55s ease;
-        display:flex; flex-direction:row; align-items:center; gap:6px;
     }
     #narrative-text.visible { pointer-events:auto; }
-    #narrative-text p {
+    #narrative-box {
         font-family:'Geist',sans-serif; font-size:18px; font-weight:400;
         color:var(--color-off-black); line-height:1.5;
-        background:rgba(255,255,255,0.92); padding:1rem 1.2rem;
+        background:rgba(255,255,255,0.92); padding:1rem 1.2rem 0.6rem;
         border-radius:8px; backdrop-filter:blur(4px);
-        flex:1;
+        cursor:pointer; user-select:none;
     }
-    #narrative-text.collapsed p { visibility:hidden; }
-    #narrative-collapse-btn {
-        flex-shrink:0; align-self:center;
-        background:rgba(255,255,255,0.92); border:none; border-radius:6px;
-        font-size:10px; color:#888; padding:6px 5px; cursor:pointer;
-        backdrop-filter:blur(4px); transition:color 0.15s;
-        display:flex; align-items:center; justify-content:center;
-        line-height:1;
+    #narrative-box p { margin-bottom:0.4rem; }
+    #narrative-click-hint {
+        display:block; font-size:9px; color:#aaa; text-align:left;
+        font-family:'Geist Mono',monospace; letter-spacing:0.02em; margin-top:0.2rem;
     }
-    #narrative-collapse-btn:hover { color:#3D3D31; }
+    #narrative-show-btn {
+        display:none; font-family:'Geist',sans-serif; font-size:13px; font-weight:700;
+        color:var(--color-off-black); background:rgba(255,255,255,0.92);
+        border:none; border-radius:6px; padding:6px 12px;
+        cursor:pointer; backdrop-filter:blur(4px); letter-spacing:0.01em;
+    }
+    #narrative-show-btn:hover { background:rgba(255,255,255,1); }
+    #narrative-text.collapsed #narrative-box { display:none; }
+    #narrative-text.collapsed #narrative-show-btn { display:block; }
+    /* zoom controls */
+    #zoom-controls {
+        position:fixed; bottom:68px; left:50%; transform:translateX(-50%);
+        z-index:50; display:none; flex-direction:row; align-items:center; gap:8px;
+        pointer-events:auto;
+    }
+    #zoom-controls.visible { display:flex; }
+    .zoom-slider-label {
+        font-family:'Geist',sans-serif; font-size:11px; color:var(--color-off-black);
+        opacity:0.55; user-select:none; line-height:1;
+    }
+    #zoom-slider {
+        -webkit-appearance:none; appearance:none;
+        width:120px; height:4px;
+        background:rgba(61,61,49,0.15); border-radius:999px;
+        outline:none; cursor:pointer; pointer-events:auto;
+    }
+    #zoom-slider::-webkit-slider-thumb {
+        -webkit-appearance:none; appearance:none;
+        width:14px; height:14px; border-radius:50%;
+        background:var(--color-off-black); cursor:pointer;
+        border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.25);
+    }
+    #zoom-slider::-moz-range-thumb {
+        width:14px; height:14px; border-radius:50%;
+        background:var(--color-off-black); cursor:pointer;
+        border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.25);
+    }
     .cursor { display:inline-block; width:2px; height:1em; background:#3D3D31;
         margin-left:2px; vertical-align:text-bottom;
         animation:blink 0.7s step-end infinite; }
@@ -104,6 +136,7 @@
     .tt-meta  { font-size:7.5pt; color:#b0b0b0; margin-bottom:4px; }
     .tt-link a { color:#fff; text-decoration:none; font-size:7.5pt; font-weight:600; }
     .tt-link a:hover { text-decoration:underline; }
+    .tt-nature { font-size:7.5pt; font-weight:600; margin-bottom:3px; }
     #pinned-tooltip {
         position:fixed; background:#3D3D31; color:#fff;
         padding:10px 14px; border-radius:4px; font-family:'Geist',sans-serif;
@@ -136,35 +169,6 @@
     }
     #zoom-hint.visible { opacity:1; }
 
-    /* zoom controls */
-    #zoom-controls {
-        position:fixed; bottom:68px; left:50%; transform:translateX(-50%);
-        z-index:50; display:none; flex-direction:row; align-items:center; gap:8px;
-        pointer-events:auto;
-    }
-    #zoom-controls.visible { display:flex; }
-    .zoom-slider-label {
-        font-family:'Geist',sans-serif; font-size:11px; color:var(--color-off-black);
-        opacity:0.55; user-select:none; line-height:1;
-    }
-    #zoom-slider {
-        -webkit-appearance:none; appearance:none;
-        width:120px; height:4px;
-        background:rgba(61,61,49,0.15); border-radius:999px;
-        outline:none; cursor:pointer; pointer-events:auto;
-    }
-    #zoom-slider::-webkit-slider-thumb {
-        -webkit-appearance:none; appearance:none;
-        width:14px; height:14px; border-radius:50%;
-        background:var(--color-off-black); cursor:pointer;
-        border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.25);
-    }
-    #zoom-slider::-moz-range-thumb {
-        width:14px; height:14px; border-radius:50%;
-        background:var(--color-off-black); cursor:pointer;
-        border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.25);
-    }
-
     /* progress */
     #progress-bar-track { position:fixed; bottom:0; left:0; width:100%; height:7px; background:rgba(61,61,49,.1); z-index:100; pointer-events:none; }
     #progress-bar-fill  { height:100%; width:0%; background:#4F6F89; transition:width .1s linear; }
@@ -179,7 +183,13 @@
 <div id="fixed-overlays">
     <div id="stats-display"><span id="stat-initiatives">0</span> Initiatives<span class="sep">·</span><span id="stat-countries">0</span> Countries<span class="sep">·</span>1 Movement</div>
 </div>
-<div id="narrative-text"><button id="narrative-collapse-btn">◀</button><p id="narrative-p"></p></div>
+<div id="narrative-text">
+    <div id="narrative-box">
+        <p id="narrative-p"></p>
+        <span id="narrative-click-hint">click to hide</span>
+    </div>
+    <button id="narrative-show-btn">show description</button>
+</div>
 <button id="skip-btn">skip →</button>
 <div id="zoom-hint">slider to zoom · drag to pan</div>
 <div id="zoom-controls">
@@ -190,12 +200,13 @@
 <div id="country-name-display"></div>
 
 <!-- Tooltips -->
-<div id="tooltip"><div class="tt-title" id="tt-title"></div><div class="tt-meta" id="tt-meta"></div><div class="tt-link" id="tt-link"></div></div>
+<div id="tooltip"><div class="tt-title" id="tt-title"></div><div class="tt-meta" id="tt-meta"></div><div class="tt-nature" id="tt-nature"></div><div class="tt-link" id="tt-link"></div></div>
 <div id="country-tooltip"></div>
 <div id="pinned-tooltip">
     <button id="pt-close">×</button>
     <div class="tt-title" id="pt-title"></div>
     <div class="tt-meta"  id="pt-meta"></div>
+    <div class="tt-nature" id="pt-nature"></div>
     <div class="tt-link"  id="pt-link"></div>
 </div>
 
@@ -536,7 +547,9 @@ function initViz(){
             const found=findParticle(p.mouseX,p.mouseY);
             if(found){
                 document.getElementById('tt-title').textContent=found.title;
-                document.getElementById('tt-meta').textContent=`${found.data['Primary Year']||'—'} · ${found.data['Status']||'—'}`;
+                const nature=found.data['Primary Nature Type']||'';
+                document.getElementById('tt-meta').innerHTML=`${found.data['Primary Year']||'—'} · ${found.data['Status']||'—'}`+(nature?` · <span style="color:${found.color};font-weight:600">${nature}</span>`:'');
+                document.getElementById('tt-nature').textContent='';
                 document.getElementById('tt-link').innerHTML=found.permalink?`<a href="${found.permalink}" target="_blank">more info ↗</a>`:'';
                 ttEl.style.setProperty('--tt-accent', found.color);
                 ttEl.style.display='block';
@@ -625,17 +638,16 @@ function initViz(){
     setupObserver();
     document.getElementById('skip-btn').addEventListener('click',()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}));
     document.getElementById('pt-close').addEventListener('click',hidePinned);
-    document.getElementById('narrative-collapse-btn').addEventListener('click',()=>{
-        const box=document.getElementById('narrative-text');
-        const btn=document.getElementById('narrative-collapse-btn');
-        const collapsed=box.classList.toggle('collapsed');
-        btn.textContent=collapsed?'▶':'◀';
+    document.getElementById('narrative-box').addEventListener('click',()=>{
+        document.getElementById('narrative-text').classList.add('collapsed');
+    });
+    document.getElementById('narrative-show-btn').addEventListener('click',()=>{
+        document.getElementById('narrative-text').classList.remove('collapsed');
     });
     window.addEventListener('scroll',()=>{
         if(selectedParticle) positionPinnedTooltip();
         const pct=window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100;
         document.getElementById('progress-bar-fill').style.width=pct+'%';
-        // Hide country name once static content is visible
         const staticEl=document.getElementById('static-content');
         if(staticEl&&selectedCountry){
             const rect=staticEl.getBoundingClientRect();
@@ -644,81 +656,36 @@ function initViz(){
         }
     });
 
-    /* ── MAP ZOOM INTERACTIONS (wheel + drag + pinch) ── */
-    const canvas=document.querySelector('#p5-canvas canvas')||document.getElementById('p5-canvas');
+    /* ── MAP ZOOM: slider + mouse drag only ── */
+    const zoomSlider=document.getElementById('zoom-slider');
+    function syncSlider(){ zoomSlider.value=mapZoom.k; }
 
-    // Slider zoom
-    const zoomSlider = document.getElementById('zoom-slider');
-    zoomSlider.addEventListener('input', () => {
+    zoomSlider.addEventListener('input',()=>{
         if(!mapZoomActive) return;
-        const cx = window.innerWidth/2, cy = window.innerHeight/2;
-        const k0 = mapZoom.k;
-        mapZoom.k = parseFloat(zoomSlider.value);
-        mapZoom.tx = cx - (cx - mapZoom.tx) * (mapZoom.k / k0);
-        mapZoom.ty = cy - (cy - mapZoom.ty) * (mapZoom.k / k0);
-        clampZoom();
-        applyZoomToParticles();
+        const cx=window.innerWidth/2, cy=window.innerHeight/2;
+        const k0=mapZoom.k;
+        mapZoom.k=parseFloat(zoomSlider.value);
+        mapZoom.tx=cx-(cx-mapZoom.tx)*(mapZoom.k/k0);
+        mapZoom.ty=cy-(cy-mapZoom.ty)*(mapZoom.k/k0);
+        clampZoom(); applyZoomToParticles();
     });
 
-    // Sync slider when zoom changes via drag/pinch
-    function syncSlider(){ zoomSlider.value = mapZoom.k; }
-
-    // Mouse drag
-    canvas.addEventListener('mousedown',(e)=>{
+    const canvasWrap=document.getElementById('p5-canvas');
+    canvasWrap.addEventListener('mousedown',(e)=>{
         if(!mapZoomActive||mapZoom.k<=1) return;
         _drag={down:true,x:e.clientX,y:e.clientY,tx:mapZoom.tx,ty:mapZoom.ty};
-        canvas.style.cursor='grabbing';
+        canvasWrap.style.cursor='grabbing';
     });
     window.addEventListener('mousemove',(e)=>{
         if(!_drag.down) return;
         mapZoom.tx=_drag.tx+(e.clientX-_drag.x);
         mapZoom.ty=_drag.ty+(e.clientY-_drag.y);
-        clampZoom();
-        applyZoomToParticles();
-        syncSlider();
+        clampZoom(); applyZoomToParticles();
     });
     window.addEventListener('mouseup',()=>{
-        if(_drag.down){ _drag.down=false; canvas.style.cursor=mapZoomActive?'grab':'default'; }
+        if(_drag.down){ _drag.down=false; canvasWrap.style.cursor=mapZoomActive?'grab':'default'; }
     });
-
-    // Touch pinch + drag
-    canvas.addEventListener('touchstart',(e)=>{
-        if(!mapZoomActive) return;
-        if(e.touches.length===2){
-            e.preventDefault();
-            const dx=e.touches[0].clientX-e.touches[1].clientX;
-            const dy=e.touches[0].clientY-e.touches[1].clientY;
-            _pinch={active:true,dist:Math.hypot(dx,dy),k0:mapZoom.k,tx0:mapZoom.tx,ty0:mapZoom.ty,
-                mx:(e.touches[0].clientX+e.touches[1].clientX)/2,
-                my:(e.touches[0].clientY+e.touches[1].clientY)/2};
-        } else if(e.touches.length===1){
-            _drag={down:true,x:e.touches[0].clientX,y:e.touches[0].clientY,tx:mapZoom.tx,ty:mapZoom.ty};
-        }
-    },{passive:false});
-    canvas.addEventListener('touchmove',(e)=>{
-        if(!mapZoomActive) return;
-        if(_pinch.active&&e.touches.length===2){
-            e.preventDefault();
-            const dx=e.touches[0].clientX-e.touches[1].clientX;
-            const dy=e.touches[0].clientY-e.touches[1].clientY;
-            const dist=Math.hypot(dx,dy);
-            const ratio=dist/_pinch.dist;
-            const k0=_pinch.k0;
-            mapZoom.k=Math.max(MAP_ZOOM_MIN,Math.min(MAP_ZOOM_MAX,k0*ratio));
-            mapZoom.tx=_pinch.mx-(_pinch.mx-_pinch.tx0)*(mapZoom.k/k0);
-            mapZoom.ty=_pinch.my-(_pinch.my-_pinch.ty0)*(mapZoom.k/k0);
-            clampZoom();
-            applyZoomToParticles();
-            syncSlider();
-        } else if(_drag.down&&e.touches.length===1){
-            mapZoom.tx=_drag.tx+(e.touches[0].clientX-_drag.x);
-            mapZoom.ty=_drag.ty+(e.touches[0].clientY-_drag.y);
-            clampZoom();
-            applyZoomToParticles();
-        }
-    },{passive:false});
-    canvas.addEventListener('touchend',()=>{ _pinch.active=false; _drag.down=false; });
-}
+}  // end initViz
 
 /* ════════════════════════════════════════════════════
    MAP DRAWING (fills only, no outlines when showCountryFills)
@@ -786,7 +753,7 @@ function applyZoomToParticles(){
     if(!mapZoomActive) return;
     particles.forEach((p,i)=>{
         const pos=particleMapPos[i]||{x:p5Instance.width-80,y:40};
-        p.setTarget(pos.x*mapZoom.k+mapZoom.tx, pos.y*mapZoom.k+mapZoom.ty, true);
+        p.snapTo(pos.x*mapZoom.k+mapZoom.tx, pos.y*mapZoom.k+mapZoom.ty, true);
     });
 }
 
@@ -833,7 +800,9 @@ function positionPinnedTooltip(){
 function showPinned(p){
     selectedParticle=p;
     document.getElementById('pt-title').textContent=p.title;
-    document.getElementById('pt-meta').textContent=`${p.data['Primary Year']||'—'} · ${p.data['Status']||'—'}`;
+    const ptNatureText=p.data['Primary Nature Type']||'';
+    document.getElementById('pt-meta').innerHTML=`${p.data['Primary Year']||'—'} · ${p.data['Status']||'—'}`+(ptNatureText?` · <span style="color:${p.color};font-weight:600">${ptNatureText}</span>`:'');
+    document.getElementById('pt-nature').textContent='';
     document.getElementById('pt-link').innerHTML=p.permalink?`<a href="${p.permalink}" target="_blank">more info ↗</a>`:'';
     const ptEl=document.getElementById('pinned-tooltip');
     ptEl.style.setProperty('--pt-accent', p.color);
@@ -854,7 +823,6 @@ function typewrite(text, onDone){
     const pel=document.getElementById('narrative-p');
     const box=document.getElementById('narrative-text');
     box.classList.remove('collapsed');
-    document.getElementById('narrative-collapse-btn').textContent='◀';
     box.style.opacity='1';
     box.classList.add('visible');
     narrativeVisible=true;
@@ -1001,7 +969,7 @@ function onSectionEnter(sec){
             break;
 
         case 's4-regions':{
-            showMap=false; showCountryFills=false; highlightCountries.clear(); hoveredCountry=null;
+            showMap=true; showCountryFills=false; highlightCountries.clear(); hoveredCountry=null;
             layoutAllRegions();
             const total4=particles.length||1;
             const americas=particles.filter(p=>p.data.Region==='North America'||p.data.Region==='Latin America').length;
